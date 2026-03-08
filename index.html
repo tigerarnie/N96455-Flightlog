@@ -541,6 +541,16 @@
 // =============================================
 let flights = [], settings = {}, accounts = {};
 const PREPAID_OPS = ['Zoltan', 'NGFT'];
+  const DEFAULTS = {
+  airtableBase:    'appufchnHsKxq09q3',
+  airtableTable:   'FlightLog',
+  emailServiceId:  'service_sqyaj4n',
+  emailTemplateId: 'template_xrnd2s9',
+  emailPublicKey:  'VGmkkEq6qH-hZ0VeM',
+  ownerEmail:      'arne@haeusslair.com',
+  zoltanEmail:     'zoltanvajo@gmail.com',
+  ngftEmail:       'arne@citationacademy.com',
+};
 
 // =============================================
 //  INIT
@@ -574,7 +584,8 @@ function prefillStartFromLast() {
 function loadData() {
   try {
     flights = JSON.parse(localStorage.getItem('n96455_flights') || '[]');
-    settings = JSON.parse(localStorage.getItem('n96455_settings') || '{}');
+    const saved = JSON.parse(localStorage.getItem('n96455_settings') || '{}');
+settings = Object.assign({}, DEFAULTS, saved);
     const a = JSON.parse(localStorage.getItem('n96455_accounts') || 'null');
     accounts = a || { Zoltan: [], NGFT: [] };
   } catch(e) { flights=[]; settings={}; accounts={Zoltan:[],NGFT:[]}; }
