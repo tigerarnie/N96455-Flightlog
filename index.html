@@ -201,6 +201,33 @@
   .empty-state { text-align:center; padding:48px 24px; color:var(--muted); font-family:'DM Mono',monospace; font-size:13px; letter-spacing:1px; line-height:2; }
   .empty-icon { font-size:40px; margin-bottom:12px; display:block; opacity:0.5; }
 
+
+  /* MAINTENANCE */
+  .maint-item { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:15px; margin-bottom:10px; backdrop-filter:blur(8px); transition:all 0.2s; }
+  .maint-item.due { border-color:var(--red); background:rgba(255,77,109,0.06); }
+  .maint-item.soon { border-color:var(--orange); background:rgba(255,140,66,0.06); }
+  .maint-item.ok { border-color:var(--green); }
+  .maint-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .maint-name { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; }
+  .maint-badge { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1.5px; padding:3px 10px; border-radius:20px; text-transform:uppercase; }
+  .maint-badge.due { background:rgba(255,77,109,0.2); color:var(--red); border:1px solid var(--red); }
+  .maint-badge.soon { background:rgba(255,140,66,0.2); color:var(--orange); border:1px solid var(--orange); }
+  .maint-badge.ok { background:rgba(0,229,160,0.1); color:var(--green); border:1px solid var(--green); }
+  .maint-progress { height:6px; background:rgba(0,0,0,0.3); border-radius:3px; overflow:hidden; margin:8px 0; }
+  .maint-fill { height:100%; border-radius:3px; transition:width 0.6s ease; }
+  .maint-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px; }
+  .maint-stat { text-align:center; background:rgba(0,0,0,0.2); border-radius:6px; padding:8px 4px; }
+  .maint-stat-label { font-family:'DM Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:3px; }
+  .maint-stat-val { font-family:'DM Mono',monospace; font-size:13px; }
+  .maint-actions { display:flex; gap:8px; margin-top:12px; }
+  .maint-btn { flex:1; padding:9px; border:1px solid var(--border); background:transparent; color:var(--muted); border-radius:8px; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; cursor:pointer; transition:all 0.2s; }
+  .maint-btn:hover { border-color:var(--amber); color:var(--amber); }
+  .maint-btn.primary { background:var(--amber); color:var(--sky); border-color:var(--amber); font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:2px; }
+  .maint-add-form { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:14px; backdrop-filter:blur(12px); }
+  .due-alert { background:rgba(255,77,109,0.1); border:1px solid var(--red); border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+  .due-alert-title { font-family:'Bebas Neue',sans-serif; font-size:16px; color:var(--red); letter-spacing:2px; margin-bottom:6px; }
+  .due-alert-item { font-family:'DM Mono',monospace; font-size:11px; color:var(--text); margin-bottom:3px; }
+
   @media(max-width:480px) {
     .field-row { grid-template-columns:1fr; }
     .field-row.triple { grid-template-columns:1fr 1fr; }
@@ -532,17 +559,84 @@
     </div>
   </div>
 
+
+  <!-- ===== MAINTENANCE ===== -->
+  <div class="panel" id="panel-maint">
+
+    <!-- DUE ALERTS (rendered dynamically) -->
+    <div id="maintAlerts"></div>
+
+    <!-- ITEMS LIST -->
+    <div id="maintList"></div>
+
+    <!-- ADD NEW ITEM -->
+    <div class="maint-add-form">
+      <div class="card-title">➕ Add Maintenance Item</div>
+      <div class="field-row single" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Item Name <span class="req">*</span></label>
+          <input type="text" id="mNewName" placeholder="e.g. Oil Change, Annual, ELT Battery">
+        </div>
+      </div>
+      <div class="field-row" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Interval Type</label>
+          <select id="mNewType">
+            <option value="tach">Tach Hours</option>
+            <option value="date">Calendar Days</option>
+            <option value="both">Both (whichever first)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Interval</label>
+          <input type="number" id="mNewInterval" placeholder="e.g. 50" step="0.5">
+        </div>
+      </div>
+      <div class="field-row" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Last Done — Tach</label>
+          <input type="number" id="mNewLastTach" placeholder="e.g. 987.6" step="0.1">
+        </div>
+        <div class="field">
+          <label>Last Done — Date</label>
+          <input type="date" id="mNewLastDate">
+        </div>
+      </div>
+      <div class="field-row single" style="margin-bottom:14px;">
+        <div class="field">
+          <label>Notes <span class="opt">(optional)</span></label>
+          <input type="text" id="mNewNotes" placeholder="e.g. Aeroshell W80, shop contact...">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addMaintItem()" style="font-size:15px;letter-spacing:2px;">ADD ITEM</button>
+    </div>
+
+  </div>
+
 </div><!-- /app -->
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+// Init EmailJS immediately with hardcoded key
+document.addEventListener('DOMContentLoaded', () => {
+  try { emailjs.init('VGmkkEq6qH-hZ0VeM'); } catch(e) {}
+});
+</script>
 <script>
 // =============================================
 //  STATE
 // =============================================
 let flights = [], settings = {}, accounts = {};
 const PREPAID_OPS = ['Zoltan', 'NGFT'];
-  const DEFAULTS = {
+
+// =============================================
+//  HARDCODED DEFAULTS
+//  These work on every device with no setup.
+//  Only paste CLAUDE API KEY + AIRTABLE TOKEN
+//  into the Setup tab (saved per-device).
+// =============================================
+const DEFAULTS = {
   airtableBase:    'appufchnHsKxq09q3',
   airtableTable:   'FlightLog',
   emailServiceId:  'service_sqyaj4n',
@@ -559,10 +653,13 @@ const PREPAID_OPS = ['Zoltan', 'NGFT'];
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
   document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fFrom').value = 'P19';
+  document.getElementById('fTo').value = 'P19';
   prefillStartFromLast();
   setupDragDrop();
   updateTotalHobbs();
   loadSettingsUI();
+  setTimeout(checkMaintAlerts, 800);
 });
 
 function prefillStartFromLast() {
@@ -586,10 +683,13 @@ function loadData() {
   try {
     flights = JSON.parse(localStorage.getItem('n96455_flights') || '[]');
     const saved = JSON.parse(localStorage.getItem('n96455_settings') || '{}');
-settings = Object.assign({}, DEFAULTS, saved);
+    // Merge: DEFAULTS apply everywhere, saved keys (claudeKey, airtableKey) override per-device
+    settings = Object.assign({}, DEFAULTS, saved);
     const a = JSON.parse(localStorage.getItem('n96455_accounts') || 'null');
     accounts = a || { Zoltan: [], NGFT: [] };
-  } catch(e) { flights=[]; settings={}; accounts={Zoltan:[],NGFT:[]}; }
+    const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
+    maintItems = mx || defaultMaintItems();
+  } catch(e) { flights=[]; settings=Object.assign({},DEFAULTS); accounts={Zoltan:[],NGFT:[]}; maintItems=defaultMaintItems(); }
 }
 function saveFlights() { localStorage.setItem('n96455_flights', JSON.stringify(flights)); }
 function saveAccountsStore() { localStorage.setItem('n96455_accounts', JSON.stringify(accounts)); }
@@ -634,6 +734,7 @@ function switchTab(name, btn) {
   document.getElementById('panel-' + name).classList.add('active');
   if (name === 'history') renderHistory();
   if (name === 'accounts') renderAccounts();
+  if (name === 'maint') renderMaint();
 }
 
 // =============================================
@@ -1087,9 +1188,11 @@ function formatDate(d) {
 
 function clearForm(skipPrefill) {
   document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
-  ['fOperator','fPIC','fStudent','fFrom','fTo','fPurpose','hobbsEnd','tachEnd','fLandings','fFuel','fOil','fSquawks','fNotes'].forEach(id => {
+  ['fOperator','fPIC','fStudent','fPurpose','hobbsEnd','tachEnd','fLandings','fFuel','fOil','fSquawks','fNotes'].forEach(id => {
     document.getElementById(id).value='';
   });
+  document.getElementById('fFrom').value='P19';
+  document.getElementById('fTo').value='P19';
   document.getElementById('fSquawks').className='';
   document.getElementById('squawkBadgeWrap').style.display='none';
   document.getElementById('balanceBar').style.display='none';
@@ -1107,6 +1210,269 @@ function showToast(msg, type='') {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>t.classList.remove('show'), 3800);
 }
+
+// =============================================
+//  MAINTENANCE
+// =============================================
+let maintItems = [];
+
+function saveMaint() { localStorage.setItem('n96455_maint', JSON.stringify(maintItems)); }
+
+function defaultMaintItems() {
+  return [
+    { id:'1', name:'Oil Change', type:'tach', interval:50, lastTach:null, lastDate:null, notes:'Aeroshell W80 Plus' },
+    { id:'2', name:'Annual Inspection', type:'date', interval:365, lastTach:null, lastDate:null, notes:'' },
+    { id:'3', name:'ELT Battery', type:'date', interval:730, lastTach:null, lastDate:null, notes:'Check expiry date on battery' },
+    { id:'4', name:'Transponder Check', type:'date', interval:730, lastTach:null, lastDate:null, notes:'24-month requirement' },
+    { id:'5', name:'Altimeter/Static', type:'date', interval:730, lastTach:null, lastDate:null, notes:'24-month requirement' },
+    { id:'6', name:'Spark Plugs', type:'tach', interval:100, lastTach:null, lastDate:null, notes:'Rotate at 50hr, replace at 100hr' },
+    { id:'7', name:'Engine TBO', type:'tach', interval:2000, lastTach:null, lastDate:null, notes:'O-470 TBO 2000hrs — track from major overhaul tach reading' },
+  ];
+}
+
+function getCurrentTach() {
+  if (!flights.length) return null;
+  const latest = [...flights].sort((a,b)=>(b.tachEnd||0)-(a.tachEnd||0))[0];
+  return latest?.tachEnd || null;
+}
+
+function getMaintStatus(item) {
+  const curTach = getCurrentTach();
+  const today = new Date();
+  let tachStatus = null, dateStatus = null;
+
+  if ((item.type === 'tach' || item.type === 'both') && item.lastTach && item.interval) {
+    const dueTach = item.lastTach + item.interval;
+    const remaining = dueTach - (curTach || item.lastTach);
+    const pct = Math.max(0, Math.min(100, (remaining / item.interval) * 100));
+    tachStatus = { due: dueTach, remaining, pct, overdue: remaining <= 0 };
+  }
+
+  if ((item.type === 'date' || item.type === 'both') && item.lastDate && item.interval) {
+    const last = new Date(item.lastDate);
+    const dueDate = new Date(last);
+    dueDate.setDate(dueDate.getDate() + item.interval);
+    const daysRemaining = Math.round((dueDate - today) / (1000 * 60 * 60 * 24));
+    const pct = Math.max(0, Math.min(100, (daysRemaining / item.interval) * 100));
+    dateStatus = { dueDate, daysRemaining, pct, overdue: daysRemaining <= 0 };
+  }
+
+  // Overall status
+  const overdue = tachStatus?.overdue || dateStatus?.overdue;
+  const soon = !overdue && (
+    (tachStatus && tachStatus.remaining <= item.interval * 0.15) ||
+    (dateStatus && dateStatus.daysRemaining <= 30)
+  );
+  const noData = !tachStatus && !dateStatus;
+
+  return { tachStatus, dateStatus, overdue, soon, noData };
+}
+
+function renderMaint() {
+  const alertEl = document.getElementById('maintAlerts');
+  const listEl = document.getElementById('maintList');
+
+  // Load maint if not yet loaded
+  if (!maintItems.length) {
+    try {
+      const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
+      maintItems = mx || defaultMaintItems();
+    } catch(e) { maintItems = defaultMaintItems(); }
+  }
+
+  const curTach = getCurrentTach();
+
+  // Alerts
+  const dueItems = maintItems.filter(i => {
+    const s = getMaintStatus(i);
+    return s.overdue || s.soon;
+  });
+
+  if (dueItems.length) {
+    alertEl.innerHTML = `<div class="due-alert">
+      <div class="due-alert-title">⚠️ ${dueItems.length} ITEM${dueItems.length>1?'S':''} DUE / UPCOMING</div>
+      ${dueItems.map(i => {
+        const s = getMaintStatus(i);
+        const tag = s.overdue ? '🔴 OVERDUE' : '🟡 DUE SOON';
+        return `<div class="due-alert-item">${tag} — ${i.name}</div>`;
+      }).join('')}
+    </div>`;
+  } else {
+    alertEl.innerHTML = '';
+  }
+
+  // Items
+  if (!maintItems.length) {
+    listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">🔧</span>No maintenance items yet.<br>Add one below.</div>';
+    return;
+  }
+
+  listEl.innerHTML = maintItems.map((item, idx) => {
+    const s = getMaintStatus(item);
+    const statusClass = s.overdue ? 'due' : s.soon ? 'soon' : s.noData ? '' : 'ok';
+    const badgeClass = s.overdue ? 'due' : s.soon ? 'soon' : 'ok';
+    const badgeText = s.overdue ? 'OVERDUE' : s.soon ? 'DUE SOON' : s.noData ? 'NO DATA' : 'OK';
+    const nameColor = s.overdue ? 'var(--red)' : s.soon ? 'var(--orange)' : s.noData ? 'var(--muted)' : 'var(--green)';
+
+    let statsHTML = '';
+    let progressHTML = '';
+
+    if (s.tachStatus) {
+      const fillColor = s.tachStatus.overdue ? 'var(--red)' : s.tachStatus.pct < 20 ? 'var(--orange)' : 'var(--green)';
+      progressHTML += `
+        <div style="margin-bottom:4px;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">TACH</div>
+          <div class="maint-progress"><div class="maint-fill" style="width:${s.tachStatus.pct}%;background:${fillColor}"></div></div>
+        </div>`;
+      statsHTML += `
+        <div class="maint-stat">
+          <div class="maint-stat-label">Last Done</div>
+          <div class="maint-stat-val" style="color:var(--muted)">${item.lastTach || '—'}</div>
+        </div>
+        <div class="maint-stat">
+          <div class="maint-stat-label">Due At</div>
+          <div class="maint-stat-val" style="color:var(--text)">${s.tachStatus.due.toFixed(1)}</div>
+        </div>
+        <div class="maint-stat">
+          <div class="maint-stat-label">${s.tachStatus.overdue ? 'Overdue' : 'Remaining'}</div>
+          <div class="maint-stat-val" style="color:${fillColor}">${Math.abs(s.tachStatus.remaining).toFixed(1)} hrs</div>
+        </div>`;
+    }
+
+    if (s.dateStatus) {
+      const fillColor = s.dateStatus.overdue ? 'var(--red)' : s.dateStatus.pct < 20 ? 'var(--orange)' : 'var(--green)';
+      const dueStr = s.dateStatus.dueDate.toISOString().split('T')[0];
+      progressHTML += `
+        <div style="margin-bottom:4px;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">CALENDAR</div>
+          <div class="maint-progress"><div class="maint-fill" style="width:${s.dateStatus.pct}%;background:${fillColor}"></div></div>
+        </div>`;
+      statsHTML += `
+        <div class="maint-stat">
+          <div class="maint-stat-label">Last Done</div>
+          <div class="maint-stat-val" style="color:var(--muted);font-size:11px;">${item.lastDate ? formatDate(item.lastDate) : '—'}</div>
+        </div>
+        <div class="maint-stat">
+          <div class="maint-stat-label">Due</div>
+          <div class="maint-stat-val" style="color:var(--text);font-size:11px;">${formatDate(dueStr)}</div>
+        </div>
+        <div class="maint-stat">
+          <div class="maint-stat-label">${s.dateStatus.overdue ? 'Overdue' : 'Days Left'}</div>
+          <div class="maint-stat-val" style="color:${fillColor}">${Math.abs(s.dateStatus.daysRemaining)}d</div>
+        </div>`;
+    }
+
+    if (s.noData) {
+      statsHTML = `<div class="maint-stat" style="grid-column:span 3">
+        <div class="maint-stat-label">No last-done data entered</div>
+        <div class="maint-stat-val" style="color:var(--muted);font-size:11px;">Tap "Mark Done" to start tracking</div>
+      </div>`;
+    }
+
+    return `<div class="maint-item ${statusClass}">
+      <div class="maint-header">
+        <div class="maint-name" style="color:${nameColor}">${item.name}</div>
+        <span class="maint-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;">
+        Every ${item.interval} ${item.type === 'tach' ? 'tach hrs' : item.type === 'date' ? 'days' : 'tach hrs / days'}
+        ${item.notes ? ' · ' + item.notes : ''}
+      </div>
+      ${progressHTML}
+      <div class="maint-stats">${statsHTML}</div>
+      <div class="maint-actions">
+        <button class="maint-btn primary" onclick="markMaintDone(${idx})">✓ Mark Done</button>
+        <button class="maint-btn" onclick="editMaintItem(${idx})">Edit</button>
+        <button class="maint-btn" style="color:var(--red);border-color:var(--red)" onclick="deleteMaintItem(${idx})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addMaintItem() {
+  const name = document.getElementById('mNewName').value.trim();
+  const type = document.getElementById('mNewType').value;
+  const interval = parseFloat(document.getElementById('mNewInterval').value);
+  const lastTach = parseFloat(document.getElementById('mNewLastTach').value);
+  const lastDate = document.getElementById('mNewLastDate').value;
+  const notes = document.getElementById('mNewNotes').value.trim();
+
+  if (!name) { showToast('Item name is required', 'error'); return; }
+  if (isNaN(interval) || interval <= 0) { showToast('Enter a valid interval', 'error'); return; }
+
+  maintItems.push({
+    id: Date.now().toString(), name, type, interval,
+    lastTach: isNaN(lastTach) ? null : lastTach,
+    lastDate: lastDate || null,
+    notes
+  });
+  saveMaint();
+
+  // Clear form
+  ['mNewName','mNewInterval','mNewLastTach','mNewNotes'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('mNewLastDate').value='';
+  document.getElementById('mNewType').value='tach';
+
+  renderMaint();
+  showToast('✅ Maintenance item added');
+}
+
+function markMaintDone(idx) {
+  const item = maintItems[idx];
+  const curTach = getCurrentTach();
+  const today = new Date().toISOString().split('T')[0];
+
+  if (item.type === 'tach' || item.type === 'both') {
+    const t = prompt(`Mark "${item.name}" done.
+Enter Tach reading (current: ${curTach || '?'}):`, curTach || '');
+    if (t === null) return;
+    item.lastTach = parseFloat(t) || curTach;
+  }
+  if (item.type === 'date' || item.type === 'both') {
+    item.lastDate = today;
+  }
+
+  saveMaint();
+  renderMaint();
+  showToast(`✅ ${item.name} marked done`);
+}
+
+function editMaintItem(idx) {
+  const item = maintItems[idx];
+  const newInterval = prompt(`Edit interval for "${item.name}" (current: ${item.interval}):`, item.interval);
+  if (newInterval === null) return;
+  const newNotes = prompt('Notes:', item.notes || '');
+  if (newNotes === null) return;
+  item.interval = parseFloat(newInterval) || item.interval;
+  item.notes = newNotes;
+  saveMaint();
+  renderMaint();
+  showToast('✅ Item updated');
+}
+
+function deleteMaintItem(idx) {
+  if (!confirm(`Delete "${maintItems[idx].name}"?`)) return;
+  maintItems.splice(idx, 1);
+  saveMaint();
+  renderMaint();
+}
+
+// Check maintenance alerts on load and show banner if anything is due
+function checkMaintAlerts() {
+  try {
+    const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
+    maintItems = mx || defaultMaintItems();
+  } catch(e) { maintItems = defaultMaintItems(); }
+
+  const dueItems = maintItems.filter(i => {
+    const s = getMaintStatus(i);
+    return s.overdue || s.soon;
+  });
+  if (dueItems.length) {
+    showToast(`🔧 ${dueItems.length} maintenance item${dueItems.length>1?'s':''} due/upcoming`, 'warn');
+  }
+}
+
 </script>
 </body>
 </html>
