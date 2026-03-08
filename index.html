@@ -228,6 +228,9 @@
   .due-alert-title { font-family:'Bebas Neue',sans-serif; font-size:16px; color:var(--red); letter-spacing:2px; margin-bottom:6px; }
   .due-alert-item { font-family:'DM Mono',monospace; font-size:11px; color:var(--text); margin-bottom:3px; }
 
+
+  .tab-badge { display:inline-block; width:8px; height:8px; background:var(--red); border-radius:50%; margin-left:5px; vertical-align:middle; box-shadow:0 0 6px var(--red); animation:pulse 1.5s ease-in-out infinite; }
+
   @media(max-width:480px) {
     .field-row { grid-template-columns:1fr; }
     .field-row.triple { grid-template-columns:1fr 1fr; }
@@ -269,7 +272,7 @@
     <button class="tab active" onclick="switchTab('log',this)">✈️ Log</button>
     <button class="tab" onclick="switchTab('history',this)">📖 History</button>
     <button class="tab" onclick="switchTab('accounts',this)">💳 Accounts</button>
-    <button class="tab" onclick="switchTab('maint',this)">🔧 Maint</button>
+    <button class="tab" id="maintTab" onclick="switchTab('maint',this)">🔧 Maint</button>
     <button class="tab" onclick="switchTab('settings',this)">⚙️ Setup</button>
   </div>
 
@@ -1010,6 +1013,21 @@ async function sendEmail(f) {
   const acctSection = hasPrepaid
     ? `\n📊 ACCOUNT BALANCE — ${op}\n${'─'.repeat(30)}\nPurchased : ${totalBought.toFixed(1)} hrs\nUsed      : ${used.toFixed(1)} hrs\nRemaining : ${remain.toFixed(1)} hrs${remain < 5 ? '\n⚠️  LOW BALANCE — please renew soon.' : remain < 10 ? '\n⚡ Account balance below 10 hrs.' : ''}\n` : '';
 
+  // Build maintenance alerts section for email
+  const dueMaint = maintItems.filter(i => { const s=getMaintStatus(i); return s.overdue||s.soon; });
+  const maintSection = dueMaint.length ? `
+🔧 MAINTENANCE ALERTS
+${'─'.repeat(30)}
+${dueMaint.map(i => {
+    const s = getMaintStatus(i);
+    const tag = s.overdue ? '🔴 OVERDUE' : '🟡 DUE SOON';
+    let detail = '';
+    if (s.tachStatus) detail += ` · Tach: ${s.tachStatus.overdue ? Math.abs(s.tachStatus.remaining).toFixed(1)+' hrs overdue' : s.tachStatus.remaining.toFixed(1)+' hrs remaining'}`;
+    if (s.dateStatus) detail += ` · ${s.dateStatus.overdue ? Math.abs(s.dateStatus.daysRemaining)+' days overdue' : s.dateStatus.daysRemaining+' days remaining'}`;
+    return `${tag} — ${i.name}${detail}`;
+  }).join('\n')}
+` : '';
+
   const body = `N96455 CESSNA C182 — FLIGHT LOG
 ${'═'.repeat(40)}
 Date      : ${formatDate(f.date)}
@@ -1023,9 +1041,9 @@ Landings : ${f.landings}
 Fuel   : ${f.fuel} gal ${f.fuelType}
 Oil    : ${f.oil} qt
 ${f.squawks?'\n⚠️  SQUAWK — '+f.squawks:''}${f.notes?'\n\nNotes: '+f.notes:''}
-${acctSection}${'═'.repeat(40)}`;
+${acctSection}${maintSection}${'═'.repeat(40)}`;
 
-  const subject = `N96455 · ${formatDate(f.date)} · ${f.operator}/${f.pic}${f.squawks?' ⚠️ SQUAWK':''}`;
+  const subject = `N96455 · ${formatDate(f.date)} · ${f.operator}/${f.pic}${f.squawks?' ⚠️ SQUAWK':''}${dueMaint.length?' 🔧 MAINT':''}`;
   const recipients = [
     settings.ownerEmail ? {email:settings.ownerEmail, name:'Aircraft Owner'} : null,
     opEmail ? {email:opEmail, name:op} : null
@@ -1217,7 +1235,85 @@ function showToast(msg, type='') {
 // =============================================
 let maintItems = [];
 
-function saveMaint() { localStorage.setItem('n96455_maint', JSON.stringify(maintItems)); }
+function saveMaint() {
+  localStorage.setItem('n96455_maint', JSON.stringify(maintItems));
+}
+
+// Push all maintItems to Airtable Maintenance table (upsert by Name)
+async function syncMaintToAirtable() {
+  if (!settings.airtableKey || !settings.airtableBase) return;
+  const table = encodeURIComponent('Maintenance');
+  const base = settings.airtableBase;
+  const headers = { 'Authorization': `Bearer ${settings.airtableKey}`, 'Content-Type': 'application/json' };
+
+  // Fetch existing records to find record IDs by Name
+  let existingMap = {};
+  try {
+    const r = await fetch(`https://api.airtable.com/v0/${base}/${table}?fields%5B%5D=Name`, { headers });
+    if (r.ok) {
+      const d = await r.json();
+      d.records.forEach(rec => { existingMap[rec.fields.Name] = rec.id; });
+    }
+  } catch(e) {}
+
+  for (const item of maintItems) {
+    const fields = {
+      Name: item.name,
+      Type: item.type,
+      Interval: item.interval,
+      LastTach: item.lastTach || null,
+      LastDate: item.lastDate || null,
+      Notes: item.notes || '',
+      ItemID: item.id
+    };
+    // Remove nulls
+    Object.keys(fields).forEach(k => { if (fields[k] === null) delete fields[k]; });
+
+    try {
+      if (existingMap[item.name]) {
+        // Update existing
+        await fetch(`https://api.airtable.com/v0/${base}/${table}/${existingMap[item.name]}`, {
+          method: 'PATCH', headers, body: JSON.stringify({ fields })
+        });
+      } else {
+        // Create new
+        await fetch(`https://api.airtable.com/v0/${base}/${table}`, {
+          method: 'POST', headers, body: JSON.stringify({ fields })
+        });
+      }
+    } catch(e) { console.warn('Maint sync failed for', item.name, e); }
+  }
+}
+
+// Load maintItems FROM Airtable (used on app start)
+async function loadMaintFromAirtable() {
+  if (!settings.airtableKey || !settings.airtableBase) return false;
+  const table = encodeURIComponent('Maintenance');
+  const base = settings.airtableBase;
+  try {
+    const r = await fetch(`https://api.airtable.com/v0/${base}/${table}`, {
+      headers: { 'Authorization': `Bearer ${settings.airtableKey}` }
+    });
+    if (!r.ok) return false;
+    const d = await r.json();
+    if (!d.records || d.records.length === 0) return false;
+
+    maintItems = d.records.map(rec => ({
+      id: rec.fields.ItemID || rec.id,
+      name: rec.fields.Name || '',
+      type: rec.fields.Type || 'tach',
+      interval: rec.fields.Interval || 50,
+      lastTach: rec.fields.LastTach || null,
+      lastDate: rec.fields.LastDate || null,
+      notes: rec.fields.Notes || '',
+      _airtableId: rec.id
+    }));
+
+    // Cache locally
+    localStorage.setItem('n96455_maint', JSON.stringify(maintItems));
+    return true;
+  } catch(e) { return false; }
+}
 
 function defaultMaintItems() {
   return [
@@ -1269,12 +1365,15 @@ function getMaintStatus(item) {
   return { tachStatus, dateStatus, overdue, soon, noData };
 }
 
-function renderMaint() {
+async function renderMaint() {
   const alertEl = document.getElementById('maintAlerts');
   const listEl = document.getElementById('maintList');
 
-  // Load maint if not yet loaded
-  if (!maintItems.length) {
+  // Always try to refresh from Airtable when tab is opened
+  const listEl2 = document.getElementById('maintList');
+  if (listEl2) listEl2.innerHTML = '<div class="empty-state"><span class="empty-icon" style="font-size:24px">⏳</span>Loading...</div>';
+  const fromAt = await loadMaintFromAirtable();
+  if (!fromAt && !maintItems.length) {
     try {
       const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
       maintItems = mx || defaultMaintItems();
@@ -1408,6 +1507,7 @@ function addMaintItem() {
     notes
   });
   saveMaint();
+  syncMaintToAirtable();
 
   // Clear form
   ['mNewName','mNewInterval','mNewLastTach','mNewNotes'].forEach(id => document.getElementById(id).value='');
@@ -1415,7 +1515,7 @@ function addMaintItem() {
   document.getElementById('mNewType').value='tach';
 
   renderMaint();
-  showToast('✅ Maintenance item added');
+  showToast('✅ Maintenance item added & synced');
 }
 
 function markMaintDone(idx) {
@@ -1481,8 +1581,11 @@ function markMaintDone(idx) {
     }
     modal.remove();
     saveMaint();
+    syncMaintToAirtable();
     renderMaint();
-    showToast(`✅ ${item.name} marked done`);
+    const stillDue = maintItems.filter(i => { const s=getMaintStatus(i); return s.overdue||s.soon; });
+    updateMaintTabBadge(stillDue.length);
+    showToast(`✅ ${item.name} marked done & synced`);
   };
 
   // Close on backdrop click
@@ -1498,31 +1601,73 @@ function editMaintItem(idx) {
   item.interval = parseFloat(newInterval) || item.interval;
   item.notes = newNotes;
   saveMaint();
+  syncMaintToAirtable();
   renderMaint();
-  showToast('✅ Item updated');
+  showToast('✅ Item updated & synced');
 }
 
-function deleteMaintItem(idx) {
-  if (!confirm(`Delete "${maintItems[idx].name}"?`)) return;
+async function deleteMaintItem(idx) {
+  const item = maintItems[idx];
+  if (!confirm(`Delete "${item.name}"?`)) return;
+
+  // Delete from Airtable if we have an airtable ID
+  if (item._airtableId && settings.airtableKey && settings.airtableBase) {
+    try {
+      const table = encodeURIComponent('Maintenance');
+      await fetch(`https://api.airtable.com/v0/${settings.airtableBase}/${table}/${item._airtableId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${settings.airtableKey}` }
+      });
+    } catch(e) { console.warn('Airtable delete failed', e); }
+  }
+
   maintItems.splice(idx, 1);
   saveMaint();
   renderMaint();
+  showToast('🗑 Item deleted');
 }
 
 // Check maintenance alerts on load and show banner if anything is due
-function checkMaintAlerts() {
-  try {
-    const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
-    maintItems = mx || defaultMaintItems();
-    if (!mx) localStorage.setItem('n96455_maint', JSON.stringify(maintItems)); // seed defaults
-  } catch(e) { maintItems = defaultMaintItems(); }
+async function checkMaintAlerts() {
+  // Try Airtable first (cross-device sync), fall back to localStorage
+  const fromAirtable = await loadMaintFromAirtable();
+
+  if (!fromAirtable) {
+    try {
+      const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
+      maintItems = mx || defaultMaintItems();
+      if (!mx) {
+        localStorage.setItem('n96455_maint', JSON.stringify(maintItems));
+        // Seed Airtable with defaults on first run
+        syncMaintToAirtable();
+      }
+    } catch(e) { maintItems = defaultMaintItems(); }
+  }
 
   const dueItems = maintItems.filter(i => {
     const s = getMaintStatus(i);
     return s.overdue || s.soon;
   });
+
+  // Show/hide red badge on Maint tab
+  updateMaintTabBadge(dueItems.length);
+
   if (dueItems.length) {
     showToast(`🔧 ${dueItems.length} maintenance item${dueItems.length>1?'s':''} due/upcoming`, 'warn');
+  }
+}
+
+function updateMaintTabBadge(count) {
+  const tab = document.getElementById('maintTab');
+  if (!tab) return;
+  // Remove existing badge if any
+  const existing = tab.querySelector('.tab-badge');
+  if (existing) existing.remove();
+  if (count > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'tab-badge';
+    badge.title = count + ' item' + (count>1?'s':'') + ' due/upcoming';
+    tab.appendChild(badge);
   }
 }
 
