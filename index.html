@@ -250,6 +250,1698 @@
         <div class="aircraft-model">Cessna C182</div>
         <div class="aircraft-sub">DRY LEASE FLIGHT LOG</div>
         <div class="hobbs-display" id="totalHobbsDisplay"></div>
+        <div id="offlineIndicator" style="display:none;font-family:'DM Mono',monospace;font-size:10px;color:var(--orange);letter-spacing:1px;margin-top:3px;">● OFFLINE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BALANCE BAR -->
+  <div class="balance-bar" id="balanceBar" style="display:none">
+    <div class="balance-header">
+      <div class="balance-label">Prepaid Account</div>
+      <div class="balance-title" id="balanceName">—</div>
+    </div>
+    <div class="balance-track"><div class="balance-fill" id="balanceFill" style="width:100%"></div></div>
+    <div class="balance-numbers">
+      <span class="balance-used" id="balanceUsed">—</span>
+      <span class="balance-remain" id="balanceRemain">—</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('log',this)">✈️ Log</button>
+    <button class="tab" onclick="switchTab('history',this)">📖 History</button>
+    <button class="tab" onclick="switchTab('accounts',this)">💳 Accounts</button>
+    <button class="tab" id="maintTab" onclick="switchTab('maint',this)">🔧 Maint</button>
+    <button class="tab" onclick="switchTab('settings',this)">⚙️ Setup</button>
+  </div>
+
+  <!-- ===== LOG FLIGHT ===== -->
+  <div class="panel active" id="panel-log">
+
+    <!-- DUAL PHOTO -->
+    <div class="card">
+      <div class="card-title">📸 Meter Photos</div>
+      <div class="photo-grid">
+        <div class="photo-zone-wrap">
+          <div class="photo-zone-label">⏱ Hobbs Meter</div>
+          <div class="photo-zone" id="hobbsZone" onclick="triggerPhoto('hobbs')">
+            <span class="photo-icon">📷</span>
+            <div class="photo-label">Tap to capture<br>Hobbs meter</div>
+            <input type="file" class="photo-input" id="hobbsPhotoInput" accept="image/*" capture="environment">
+          </div>
+        </div>
+        <div class="photo-zone-wrap">
+          <div class="photo-zone-label">🔄 Tach Meter</div>
+          <div class="photo-zone" id="tachZone" onclick="triggerPhoto('tach')">
+            <span class="photo-icon">📷</span>
+            <div class="photo-label">Tap to capture<br>Tach meter</div>
+            <input type="file" class="photo-input" id="tachPhotoInput" accept="image/*" capture="environment">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PEOPLE -->
+    <div class="card">
+      <div class="card-title">👤 People</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Operator <span class="req">*</span></label>
+          <select id="fOperator" onchange="onOperatorChange()">
+            <option value="">— Select Operator —</option>
+            <option value="Zoltan">Zoltan</option>
+            <option value="NGFT">NGFT</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>PIC <span class="req">*</span></label>
+          <input type="text" id="fPIC" placeholder="Pilot in command">
+        </div>
+      </div>
+      <div class="field-row single">
+        <div class="field">
+          <label>Student <span class="opt">(optional)</span></label>
+          <input type="text" id="fStudent" placeholder="Student name if applicable">
+        </div>
+      </div>
+    </div>
+
+    <!-- FLIGHT INFO -->
+    <div class="card">
+      <div class="card-title">🛫 Flight Info</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Date <span class="req">*</span></label>
+          <input type="date" id="fDate">
+        </div>
+        <div class="field">
+          <label>Total Landings</label>
+          <input type="number" id="fLandings" placeholder="0" min="0" step="1">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>From</label>
+          <input type="text" id="fFrom" placeholder="P19">
+        </div>
+        <div class="field">
+          <label>To</label>
+          <input type="text" id="fTo" placeholder="P19">
+        </div>
+      </div>
+      <div class="field-row single">
+        <div class="field">
+          <label>Purpose of Flight <span class="opt">(optional · for tax tracking)</span></label>
+          <input type="text" id="fPurpose" placeholder="e.g. Training, Personal, Business, Charter">
+        </div>
+      </div>
+    </div>
+
+    <!-- HOBBS -->
+    <div class="card">
+      <div class="card-title">⏱ Hobbs Meter</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Hobbs Start</label>
+          <input type="number" id="hobbsStart" placeholder="—" step="0.1" oninput="computeTimes()">
+        </div>
+        <div class="field">
+          <label>Hobbs End</label>
+          <input type="number" id="hobbsEnd" placeholder="— (auto from photo)" step="0.1" oninput="computeTimes()">
+        </div>
+      </div>
+      <div class="computed-row">
+        <span class="computed-label">Hobbs Time</span>
+        <span class="computed-value zero" id="hobbsTime">—</span>
+      </div>
+    </div>
+
+    <!-- TACH -->
+    <div class="card">
+      <div class="card-title">🔄 Tach Meter</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Tach Start</label>
+          <input type="number" id="tachStart" placeholder="—" step="0.1" oninput="computeTimes()">
+        </div>
+        <div class="field">
+          <label>Tach End</label>
+          <input type="number" id="tachEnd" placeholder="— (auto from photo)" step="0.1" oninput="computeTimes()">
+        </div>
+      </div>
+      <div class="computed-row">
+        <span class="computed-label">Tach Time</span>
+        <span class="computed-value zero" id="tachTime">—</span>
+      </div>
+    </div>
+
+    <!-- CONSUMABLES -->
+    <div class="card">
+      <div class="card-title">⛽ Consumables</div>
+      <div class="field-row triple">
+        <div class="field">
+          <label>Fuel Added (gal)</label>
+          <input type="number" id="fFuel" placeholder="0" step="0.1">
+        </div>
+        <div class="field">
+          <label>Oil Added (qt)</label>
+          <input type="number" id="fOil" placeholder="0" step="0.1">
+        </div>
+        <div class="field">
+          <label>Fuel Type</label>
+          <select id="fFuelType">
+            <option value="100LL">100LL</option>
+            <option value="UL91">UL91</option>
+            <option value="Jet-A">Jet-A</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- SQUAWKS -->
+    <div class="card">
+      <div class="card-title">
+        <span id="squawkBadgeWrap" style="display:none"><span class="squawk-badge"><span class="squawk-pulse"></span>New Squawk</span>&nbsp;</span>
+        ⚠️ Squawks
+      </div>
+      <div class="field single">
+        <textarea id="fSquawks" placeholder="New squawks or maintenance items (leave blank if none)..." oninput="onSquawkInput(this)"></textarea>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="card">
+      <div class="card-title">📝 Flight Notes</div>
+      <div class="field single">
+        <textarea id="fNotes" placeholder="General flight notes, conditions, remarks..."></textarea>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="saveBtn" onclick="saveFlight()">💾 SAVE FLIGHT</button>
+    <button class="btn btn-secondary" onclick="clearForm()">↺ Clear Form</button>
+  </div>
+
+  <!-- ===== HISTORY ===== -->
+  <div class="panel" id="panel-history">
+    <div class="log-header">
+      <div class="log-count" id="logCount">—</div>
+      <button class="btn btn-secondary" style="width:auto;padding:8px 16px;" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+    <div id="logList"></div>
+  </div>
+
+  <!-- ===== ACCOUNTS ===== -->
+  <div class="panel" id="panel-accounts">
+    <div id="accountsList"></div>
+    <div class="card" style="margin-top:4px;">
+      <div class="card-title">➕ Add Prepaid Block</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Typically 30 hrs per block. Adding a block does not affect logged hours — it only increases the purchased total.</p>
+      <div class="field-row">
+        <div class="field">
+          <label>Operator</label>
+          <select id="newBlockOp">
+            <option value="Zoltan">Zoltan</option>
+            <option value="NGFT">NGFT</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Block Hours</label>
+          <input type="number" id="newBlockHrs" value="30" min="1" step="0.5">
+        </div>
+      </div>
+      <div class="field single" style="margin-bottom:12px;">
+        <label>Notes <span class="opt">(optional)</span></label>
+        <input type="text" id="newBlockNotes" placeholder="e.g. Invoice #1234">
+      </div>
+      <button class="btn btn-primary" onclick="addBlock()" style="font-size:15px;letter-spacing:2px;">ADD BLOCK</button>
+    </div>
+  </div>
+
+  <!-- ===== SETTINGS ===== -->
+  <div class="panel" id="panel-settings">
+    <div class="card">
+      <div class="card-title">🔑 API Keys</div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Claude API Key (for meter OCR)</label>
+        <input type="password" id="claudeKey" placeholder="sk-ant-api03-..." oninput="saveSettings()">
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Airtable Personal Access Token</label>
+        <input type="password" id="airtableKey" placeholder="pat..." oninput="saveSettings()">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Airtable Base ID</label>
+          <input type="text" id="airtableBase" placeholder="appXXXXXX" oninput="saveSettings()">
+        </div>
+        <div class="field">
+          <label>Table Name</label>
+          <input type="text" id="airtableTable" placeholder="FlightLog" oninput="saveSettings()">
+        </div>
+      </div>
+      <div id="airtableStatus" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin:10px 0 4px;">
+        <span class="status-dot pending"></span>Not configured
+      </div>
+      <button class="btn btn-secondary" onclick="testAirtable()">Test Airtable Connection</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📬 Email Notifications</div>
+      <div class="settings-note">
+        Uses <strong>EmailJS</strong> (free · 200 emails/mo) to send flight summaries + account balance alerts to operators and yourself. <a href="https://emailjs.com" target="_blank">Set up at emailjs.com →</a>
+        <br><br>
+        <strong>EmailJS template variables:</strong> <code>{{to_email}}</code> <code>{{to_name}}</code> <code>{{subject}}</code> <code>{{body}}</code>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>EmailJS Service ID</label>
+          <input type="text" id="emailServiceId" placeholder="service_xxxxxxx" oninput="saveSettings()">
+        </div>
+        <div class="field">
+          <label>EmailJS Template ID</label>
+          <input type="text" id="emailTemplateId" placeholder="template_xxxxxxx" oninput="saveSettings()">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>EmailJS Public Key</label>
+        <input type="text" id="emailPublicKey" placeholder="xxxxxxxxxxxxxxx" oninput="saveSettings()">
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Owner Email (you)</label>
+        <input type="email" id="ownerEmail" placeholder="you@email.com" oninput="saveSettings()">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Zoltan's Email</label>
+          <input type="email" id="zoltanEmail" placeholder="zoltan@email.com" oninput="saveSettings()">
+        </div>
+        <div class="field">
+          <label>NGFT Email</label>
+          <input type="email" id="ngftEmail" placeholder="ngft@email.com" oninput="saveSettings()">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Airtable Fields Reference</div>
+      <div class="steps">
+        <div class="step"><div class="step-num"></div><div class="step-text">Create base: <code>N96455 Flight Log</code> → rename table to <code>FlightLog</code></div></div>
+        <div class="step"><div class="step-num"></div><div class="step-text">Add fields: <code>Date</code> <code>Operator</code> <code>PIC</code> <code>Student</code> <code>From</code> <code>To</code> <code>Purpose</code> <code>HobbsStart</code> <code>HobbsEnd</code> <code>HobbsTime</code> <code>TachStart</code> <code>TachEnd</code> <code>TachTime</code> <code>Landings</code> <code>FuelAdded</code> <code>OilAdded</code> <code>FuelType</code> <code>Squawks</code> <code>Notes</code></div></div>
+        <div class="step"><div class="step-num"></div><div class="step-text">Get token: <a href="https://airtable.com/create/tokens" target="_blank" style="color:var(--amber)">airtable.com/create/tokens</a> → scope: <code>data.records:write</code> for your base</div></div>
+        <div class="step"><div class="step-num"></div><div class="step-text">Base ID is in the URL: <code>airtable.com/<strong>appXXXXXX</strong>/...</code></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💾 Data Management</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">All data is stored locally in your browser and optionally synced to Airtable.</p>
+      <button class="btn btn-secondary" onclick="exportCSV()">⬇ Export All Flights as CSV</button>
+      <button class="btn btn-secondary" onclick="clearAllData()" style="color:var(--red);border-color:var(--red);margin-top:8px;">🗑 Clear All Local Data</button>
+    </div>
+  </div>
+
+
+  <!-- ===== MAINTENANCE ===== -->
+  <div class="panel" id="panel-maint">
+
+    <!-- DUE ALERTS (rendered dynamically) -->
+    <div id="maintAlerts"></div>
+
+    <!-- ITEMS LIST -->
+    <div id="maintList"></div>
+
+    <!-- ADD NEW ITEM -->
+    <div class="maint-add-form">
+      <div class="card-title">➕ Add Maintenance Item</div>
+      <div class="field-row single" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Item Name <span class="req">*</span></label>
+          <input type="text" id="mNewName" placeholder="e.g. Oil Change, Annual, ELT Battery">
+        </div>
+      </div>
+      <div class="field-row" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Interval Type</label>
+          <select id="mNewType">
+            <option value="tach">Tach Hours</option>
+            <option value="date">Calendar Days</option>
+            <option value="both">Both (whichever first)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Interval</label>
+          <input type="number" id="mNewInterval" placeholder="e.g. 50" step="0.5">
+        </div>
+      </div>
+      <div class="field-row" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Last Done — Tach</label>
+          <input type="number" id="mNewLastTach" placeholder="e.g. 987.6" step="0.1">
+        </div>
+        <div class="field">
+          <label>Last Done — Date</label>
+          <input type="date" id="mNewLastDate">
+        </div>
+      </div>
+      <div class="field-row single" style="margin-bottom:14px;">
+        <div class="field">
+          <label>Notes <span class="opt">(optional)</span></label>
+          <input type="text" id="mNewNotes" placeholder="e.g. Aeroshell W80, shop contact...">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addMaintItem()" style="font-size:15px;letter-spacing:2px;">ADD ITEM</button>
+    </div>
+
+  </div>
+
+</div><!-- /app -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+// Init EmailJS immediately with hardcoded key
+document.addEventListener('DOMContentLoaded', () => {
+  try { emailjs.init('VGmkkEq6qH-hZ0VeM'); } catch(e) {}
+});
+</script>
+<script>
+// =============================================
+//  STATE
+// =============================================
+let flights = [], settings = {}, accounts = {};
+const PREPAID_OPS = ['Zoltan', 'NGFT'];
+let syncQueue = []; // offline queue: {type:'flight'|'maint', data}
+
+// =============================================
+//  HARDCODED DEFAULTS
+//  These work on every device with no setup.
+//  Only paste CLAUDE API KEY + AIRTABLE TOKEN
+//  into the Setup tab (saved per-device).
+// =============================================
+const DEFAULTS = {
+  airtableBase:    'appufchnHsKxq09q3',
+  airtableTable:   'FlightLog',
+  emailServiceId:  'service_sqyaj4n',
+  emailTemplateId: 'template_xrnd2s9',
+  emailPublicKey:  'VGmkkEq6qH-hZ0VeM',
+  ownerEmail:      'arne@haeusslair.com',
+  zoltanEmail:     'zoltanvajo@gmail.com',
+  ngftEmail:       'arne@citationacademy.com',
+};
+
+// =============================================
+//  INIT
+// =============================================
+document.addEventListener('DOMContentLoaded', () => {
+  loadData();
+  document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fFrom').value = 'P19';
+  document.getElementById('fTo').value = 'P19';
+  prefillStartFromLast();
+  setupDragDrop();
+  updateTotalHobbs();
+  loadSettingsUI();
+  loadQueue();
+  setTimeout(checkMaintAlerts, 800);
+  setTimeout(flushQueue, 2000); // retry any queued items on startup
+});
+
+function prefillStartFromLast() {
+  if (!flights.length) return;
+  const last = flights[0];
+  if (last.hobbsEnd) {
+    const el = document.getElementById('hobbsStart');
+    el.value = last.hobbsEnd; el.classList.add('auto-prev');
+  }
+  if (last.tachEnd) {
+    const el = document.getElementById('tachStart');
+    el.value = last.tachEnd; el.classList.add('auto-prev');
+  }
+  computeTimes();
+}
+
+// =============================================
+//  PERSISTENCE
+// =============================================
+function loadData() {
+  try {
+    flights = JSON.parse(localStorage.getItem('n96455_flights') || '[]');
+    const saved = JSON.parse(localStorage.getItem('n96455_settings') || '{}');
+    // Merge: DEFAULTS apply everywhere, saved keys (claudeKey, airtableKey) override per-device
+    settings = Object.assign({}, DEFAULTS, saved);
+    const a = JSON.parse(localStorage.getItem('n96455_accounts') || 'null');
+    accounts = a || { Zoltan: [], NGFT: [] };
+    const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
+    maintItems = mx || defaultMaintItems();
+    if (!mx) localStorage.setItem('n96455_maint', JSON.stringify(maintItems)); // seed defaults
+  } catch(e) { flights=[]; settings=Object.assign({},DEFAULTS); accounts={Zoltan:[],NGFT:[]}; maintItems=defaultMaintItems(); }
+}
+function saveFlights() { localStorage.setItem('n96455_flights', JSON.stringify(flights)); }
+
+// =============================================
+//  OFFLINE SYNC QUEUE
+// =============================================
+function loadQueue() {
+  try { syncQueue = JSON.parse(localStorage.getItem('n96455_queue') || '[]'); }
+  catch(e) { syncQueue = []; }
+}
+
+function saveQueue() {
+  localStorage.setItem('n96455_queue', JSON.stringify(syncQueue));
+}
+
+function enqueue(type, data) {
+  syncQueue.push({ type, data, ts: Date.now() });
+  saveQueue();
+}
+
+async function flushQueue() {
+  if (!navigator.onLine) return;
+  if (!syncQueue.length) return;
+  if (!settings.airtableKey || !settings.airtableBase) return;
+
+  const failed = [];
+  for (const item of syncQueue) {
+    let ok = false;
+    try {
+      if (item.type === 'flight') {
+        ok = await syncAirtable(item.data);
+        if (ok) {
+          // Mark flight as synced in local array
+          const f = flights.find(x => x.id === item.data.id);
+          if (f) { f.synced = true; saveFlights(); }
+        }
+      } else if (item.type === 'maint') {
+        await syncMaintToAirtable();
+        ok = true;
+      }
+    } catch(e) { ok = false; }
+    if (!ok) failed.push(item);
+  }
+
+  syncQueue = failed;
+  saveQueue();
+
+  if (failed.length === 0 && syncQueue.length === 0) {
+    showToast('☁️ All pending items synced to Airtable');
+    renderHistory(); // refresh sync indicators
+  }
+}
+
+// Listen for coming back online
+window.addEventListener('online', () => {
+  document.getElementById('offlineIndicator').style.display = 'none';
+  showToast('📶 Back online — syncing...', 'warn');
+  setTimeout(flushQueue, 1500);
+});
+
+window.addEventListener('offline', () => {
+  document.getElementById('offlineIndicator').style.display = 'block';
+  showToast('✈️ Offline mode — flights saved locally', 'warn');
+});
+
+// Set initial state
+document.addEventListener('DOMContentLoaded', () => {
+  if (!navigator.onLine) {
+    document.getElementById('offlineIndicator').style.display = 'block';
+  }
+});
+function saveAccountsStore() { localStorage.setItem('n96455_accounts', JSON.stringify(accounts)); }
+
+function saveSettings() {
+  ['claudeKey','airtableKey','airtableBase','airtableTable',
+   'emailServiceId','emailTemplateId','emailPublicKey',
+   'ownerEmail','zoltanEmail','ngftEmail'].forEach(id => {
+    settings[id] = document.getElementById(id).value;
+  });
+  localStorage.setItem('n96455_settings', JSON.stringify(settings));
+  updateAirtableStatus();
+  if (settings.emailPublicKey) { try { emailjs.init(settings.emailPublicKey); } catch(e){} }
+}
+
+function loadSettingsUI() {
+  ['claudeKey','airtableKey','airtableBase','airtableTable',
+   'emailServiceId','emailTemplateId','emailPublicKey',
+   'ownerEmail','zoltanEmail','ngftEmail'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = settings[id] || '';
+  });
+  updateAirtableStatus();
+  if (settings.emailPublicKey) { try { emailjs.init(settings.emailPublicKey); } catch(e){} }
+}
+
+function updateAirtableStatus() {
+  const el = document.getElementById('airtableStatus');
+  if (settings.airtableKey && settings.airtableBase && settings.airtableTable)
+    el.innerHTML = '<span class="status-dot ok"></span>Configured — syncs on save';
+  else
+    el.innerHTML = '<span class="status-dot pending"></span>Not configured';
+}
+
+// =============================================
+//  TABS
+// =============================================
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'history') renderHistory();
+  if (name === 'accounts') renderAccounts();
+  if (name === 'maint') renderMaint();
+}
+
+// =============================================
+//  DUAL PHOTO / OCR
+// =============================================
+function triggerPhoto(type) { document.getElementById(type + 'PhotoInput').click(); }
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'hobbsPhotoInput' && e.target.files[0]) handlePhoto('hobbs', e.target.files[0]);
+  if (e.target.id === 'tachPhotoInput' && e.target.files[0]) handlePhoto('tach', e.target.files[0]);
+});
+
+function handlePhoto(type, file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const url = e.target.result;
+    const zone = document.getElementById(type + 'Zone');
+    zone.classList.add('has-image');
+    zone.innerHTML = `<img src="${url}"><button class="photo-retake" onclick="event.stopPropagation();retakePhoto('${type}')">Retake</button>`;
+    zone.onclick = null;
+    ocrPhoto(type, url);
+  };
+  reader.readAsDataURL(file);
+}
+
+function retakePhoto(type) {
+  const zone = document.getElementById(type + 'Zone');
+  zone.classList.remove('has-image');
+  const label = type === 'hobbs' ? 'Hobbs meter' : 'Tach meter';
+  zone.innerHTML = `<span class="photo-icon">📷</span><div class="photo-label">Tap to capture<br>${label}</div><input type="file" class="photo-input" id="${type}PhotoInput" accept="image/*" capture="environment">`;
+  zone.onclick = () => triggerPhoto(type);
+}
+
+function setupDragDrop() {
+  ['hobbs','tach'].forEach(type => {
+    const zone = document.getElementById(type + 'Zone');
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) handlePhoto(type, e.dataTransfer.files[0]);
+    });
+  });
+}
+
+async function ocrPhoto(type, dataUrl) {
+  if (!settings.claudeKey) { showToast('Add Claude API key in Setup for OCR', 'warn'); return; }
+  const zone = document.getElementById(type + 'Zone');
+  const ov = document.createElement('div');
+  ov.className = 'ocr-overlay';
+  ov.innerHTML = `<div class="ocr-spinner"></div><div class="ocr-text">READING ${type.toUpperCase()}...</div>`;
+  zone.appendChild(ov);
+
+  try {
+    const base64 = dataUrl.split(',')[1];
+    const mime = dataUrl.split(';')[0].split(':')[1];
+    const label = type === 'hobbs' ? 'Hobbs' : 'Tachometer';
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': settings.claudeKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 150,
+        messages: [{
+          role: 'user',
+          content: [
+            { type:'image', source:{ type:'base64', media_type:mime, data:base64 } },
+            { type:'text', text:`Read the ${label} meter reading in this cockpit photo. Return ONLY JSON: {"value": 1234.5, "confidence": "high"} or {"value": null, "confidence": "low"} if unclear. No markdown.` }
+          ]
+        }]
+      })
+    });
+    const data = await res.json();
+    const txt = data.content?.[0]?.text || '';
+    let parsed;
+    try { parsed = JSON.parse(txt.trim()); }
+    catch(e) { const m = txt.match(/\{[^}]+\}/); if(m) try{parsed=JSON.parse(m[0]);}catch(e2){} }
+
+    if (parsed?.value !== null && parsed?.value !== undefined) {
+      const fid = type === 'hobbs' ? 'hobbsEnd' : 'tachEnd';
+      const inp = document.getElementById(fid);
+      inp.value = parsed.value;
+      inp.classList.remove('auto-prev');
+      inp.classList.add('ai-filled');
+      setTimeout(() => inp.classList.remove('ai-filled'), 3000);
+      computeTimes();
+      showToast(parsed.confidence === 'low' ? `⚠️ ${type} uncertain — verify` : `✅ ${type.charAt(0).toUpperCase()+type.slice(1)}: ${parsed.value}`,
+        parsed.confidence === 'low' ? 'warn' : '');
+    } else {
+      showToast(`Could not read ${type} meter — enter manually`, 'warn');
+    }
+  } catch(e) {
+    showToast('OCR error: ' + (e.message||'Check API key'), 'error');
+  } finally { ov.remove(); }
+}
+
+// =============================================
+//  COMPUTE
+// =============================================
+function computeTimes() {
+  const calc = (sid, eid, outId) => {
+    const s = parseFloat(document.getElementById(sid).value);
+    const e = parseFloat(document.getElementById(eid).value);
+    const el = document.getElementById(outId);
+    if (!isNaN(s) && !isNaN(e) && e > s) {
+      el.textContent = (e - s).toFixed(1) + ' hrs'; el.className = 'computed-value';
+    } else { el.textContent = '—'; el.className = 'computed-value zero'; }
+  };
+  calc('hobbsStart','hobbsEnd','hobbsTime');
+  calc('tachStart','tachEnd','tachTime');
+  refreshBalanceBar();
+}
+
+// =============================================
+//  OPERATOR / BALANCE
+// =============================================
+function onOperatorChange() { refreshBalanceBar(); }
+
+function refreshBalanceBar() {
+  const op = document.getElementById('fOperator').value;
+  const bar = document.getElementById('balanceBar');
+  if (!PREPAID_OPS.includes(op)) { bar.style.display='none'; return; }
+
+  const totalBought = getTotalBought(op);
+  const used = getUsedHours(op);
+  const remain = Math.max(0, totalBought - used);
+  const pct = totalBought > 0 ? Math.min(100, (remain/totalBought)*100) : 0;
+
+  bar.style.display = 'block';
+  document.getElementById('balanceName').textContent = op.toUpperCase();
+  const fill = document.getElementById('balanceFill');
+  fill.style.width = pct + '%';
+  fill.className = 'balance-fill' + (pct < 20 ? ' warn' : '');
+  document.getElementById('balanceUsed').textContent = used.toFixed(1) + ' hrs used';
+  const rEl = document.getElementById('balanceRemain');
+  rEl.textContent = remain.toFixed(1) + ' hrs remaining';
+  rEl.className = 'balance-remain' + (pct < 10 ? ' crit' : pct < 20 ? ' warn' : '');
+}
+
+function getTotalBought(op) { return (accounts[op]||[]).reduce((s,b)=>s+b.hours,0); }
+function getUsedHours(op) { return flights.filter(f=>f.operator===op).reduce((s,f)=>s+(f.hobbsTime||0),0); }
+
+// =============================================
+//  SQUAWK
+// =============================================
+function onSquawkInput(el) {
+  const has = el.value.trim().length > 0;
+  el.className = 'field' + (has ? ' squawk-active' : '');
+  document.getElementById('squawkBadgeWrap').style.display = has ? 'inline' : 'none';
+  document.getElementById('fSquawks').className = has ? 'squawk-active' : '';
+}
+
+// =============================================
+//  SAVE FLIGHT
+// =============================================
+async function saveFlight() {
+  const op = document.getElementById('fOperator').value;
+  const pic = document.getElementById('fPIC').value.trim();
+  const date = document.getElementById('fDate').value;
+  const hs = parseFloat(document.getElementById('hobbsStart').value);
+  const he = parseFloat(document.getElementById('hobbsEnd').value);
+
+  if (!op)   { showToast('Operator is required', 'error'); return; }
+  if (!pic)  { showToast('PIC is required', 'error'); return; }
+  if (!date) { showToast('Date is required', 'error'); return; }
+  if (isNaN(hs)||isNaN(he)) { showToast('Hobbs Start & End are required', 'error'); return; }
+  if (he <= hs) { showToast('Hobbs End must be after Start', 'error'); return; }
+
+  const ts = parseFloat(document.getElementById('tachStart').value);
+  const te = parseFloat(document.getElementById('tachEnd').value);
+
+  const f = {
+    id: Date.now().toString(),
+    date, op, operator: op, pic,
+    student: document.getElementById('fStudent').value.trim(),
+    from: document.getElementById('fFrom').value.toUpperCase(),
+    to: document.getElementById('fTo').value.toUpperCase(),
+    purpose: document.getElementById('fPurpose').value.trim(),
+    hobbsStart: hs, hobbsEnd: he,
+    hobbsTime: parseFloat((he-hs).toFixed(1)),
+    tachStart: isNaN(ts)?null:ts, tachEnd: isNaN(te)?null:te,
+    tachTime: (!isNaN(ts)&&!isNaN(te)&&te>ts) ? parseFloat((te-ts).toFixed(1)) : null,
+    landings: parseInt(document.getElementById('fLandings').value)||0,
+    fuel: parseFloat(document.getElementById('fFuel').value)||0,
+    oil: parseFloat(document.getElementById('fOil').value)||0,
+    fuelType: document.getElementById('fFuelType').value,
+    squawks: document.getElementById('fSquawks').value.trim(),
+    notes: document.getElementById('fNotes').value.trim(),
+    synced: false
+  };
+
+  flights.unshift(f);
+  saveFlights();
+  updateTotalHobbs();
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled=true; btn.textContent='SAVING...';
+
+  let synced = false;
+  if (settings.airtableKey && settings.airtableBase && settings.airtableTable) {
+    if (navigator.onLine) {
+      synced = await syncAirtable(f);
+      if (synced) { f.synced=true; saveFlights(); }
+      else { enqueue('flight', f); }
+    } else {
+      enqueue('flight', f);
+    }
+  }
+
+  if (settings.emailServiceId && settings.emailTemplateId && settings.emailPublicKey) {
+    await sendEmail(f);
+  }
+
+  btn.disabled=false; btn.innerHTML='💾 SAVE FLIGHT';
+  const msg = synced ? '✅ Saved + synced'
+    : !navigator.onLine ? '✈️ Saved offline — will sync when back online'
+    : '💾 Saved locally' + (settings.airtableKey?' (queued for retry)':'');
+  showToast(msg, synced ? '' : 'warn');
+  clearForm(true);
+}
+
+// =============================================
+//  AIRTABLE
+// =============================================
+async function syncAirtable(f) {
+  try {
+    const fields = {
+      Date:f.date, Operator:f.operator, PIC:f.pic,
+      Student:f.student||'', From:f.from, To:f.to, Purpose:f.purpose||'',
+      HobbsStart:f.hobbsStart, HobbsEnd:f.hobbsEnd, HobbsTime:f.hobbsTime,
+      TachStart:f.tachStart, TachEnd:f.tachEnd, TachTime:f.tachTime,
+      Landings:f.landings, FuelAdded:f.fuel, OilAdded:f.oil, FuelType:f.fuelType,
+      Squawks:f.squawks||'', Notes:f.notes||''
+    };
+    Object.keys(fields).forEach(k=>{if(fields[k]===null||fields[k]===undefined)delete fields[k];});
+    const r = await fetch(`https://api.airtable.com/v0/${settings.airtableBase}/${encodeURIComponent(settings.airtableTable)}`, {
+      method:'POST',
+      headers:{'Authorization':`Bearer ${settings.airtableKey}`,'Content-Type':'application/json'},
+      body:JSON.stringify({fields})
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+async function testAirtable() {
+  if (!settings.airtableKey||!settings.airtableBase||!settings.airtableTable) {
+    showToast('Fill in Airtable fields first','error'); return;
+  }
+  showToast('Testing...');
+  try {
+    const r = await fetch(`https://api.airtable.com/v0/${settings.airtableBase}/${encodeURIComponent(settings.airtableTable)}?maxRecords=1`,
+      {headers:{'Authorization':`Bearer ${settings.airtableKey}`}});
+    if (r.ok) {
+      document.getElementById('airtableStatus').innerHTML='<span class="status-dot ok"></span>Connected ✓';
+      showToast('✅ Airtable connected!');
+    } else {
+      const d = await r.json();
+      showToast('❌ '+(d.error?.message||'Failed'),'error');
+    }
+  } catch(e) { showToast('❌ Network error','error'); }
+}
+
+// =============================================
+//  EMAIL
+// =============================================
+async function sendEmail(f) {
+  const op = f.operator;
+  const opEmail = op==='Zoltan'?settings.zoltanEmail : op==='NGFT'?settings.ngftEmail : null;
+  const totalBought = getTotalBought(op);
+  const used = getUsedHours(op);
+  const remain = Math.max(0, totalBought - used);
+  const hasPrepaid = PREPAID_OPS.includes(op) && totalBought > 0;
+  const route = [f.from,f.to].filter(Boolean).join(' → ')||'—';
+
+  const acctSection = hasPrepaid
+    ? `\n📊 ACCOUNT BALANCE — ${op}\n${'─'.repeat(30)}\nPurchased : ${totalBought.toFixed(1)} hrs\nUsed      : ${used.toFixed(1)} hrs\nRemaining : ${remain.toFixed(1)} hrs${remain < 5 ? '\n⚠️  LOW BALANCE — please renew soon.' : remain < 10 ? '\n⚡ Account balance below 10 hrs.' : ''}\n` : '';
+
+  // Build maintenance alerts section for email
+  const dueMaint = maintItems.filter(i => { const s=getMaintStatus(i); return s.overdue||s.soon; });
+  const maintSection = dueMaint.length ? `
+🔧 MAINTENANCE ALERTS
+${'─'.repeat(30)}
+${dueMaint.map(i => {
+    const s = getMaintStatus(i);
+    const tag = s.overdue ? '🔴 OVERDUE' : '🟡 DUE SOON';
+    let detail = '';
+    if (s.tachStatus) detail += ` · Tach: ${s.tachStatus.overdue ? Math.abs(s.tachStatus.remaining).toFixed(1)+' hrs overdue' : s.tachStatus.remaining.toFixed(1)+' hrs remaining'}`;
+    if (s.dateStatus) detail += ` · ${s.dateStatus.overdue ? Math.abs(s.dateStatus.daysRemaining)+' days overdue' : s.dateStatus.daysRemaining+' days remaining'}`;
+    return `${tag} — ${i.name}${detail}`;
+  }).join('\n')}
+` : '';
+
+  const body = `N96455 CESSNA C182 — FLIGHT LOG
+${'═'.repeat(40)}
+Date      : ${formatDate(f.date)}
+Operator  : ${f.operator}
+PIC       : ${f.pic}${f.student?'\nStudent   : '+f.student:''}
+Route     : ${route}${f.purpose?'\nPurpose   : '+f.purpose:''}
+
+HOBBS  : ${f.hobbsStart} → ${f.hobbsEnd}  (${f.hobbsTime} hrs)
+TACH   : ${f.tachStart??'—'} → ${f.tachEnd??'—'}${f.tachTime?' ('+f.tachTime+' hrs)':''}
+Landings : ${f.landings}
+Fuel   : ${f.fuel} gal ${f.fuelType}
+Oil    : ${f.oil} qt
+${f.squawks?'\n⚠️  SQUAWK — '+f.squawks:''}${f.notes?'\n\nNotes: '+f.notes:''}
+${acctSection}${maintSection}${'═'.repeat(40)}`;
+
+  const subject = `N96455 · ${formatDate(f.date)} · ${f.operator}/${f.pic}${f.squawks?' ⚠️ SQUAWK':''}${dueMaint.length?' 🔧 MAINT':''}`;
+  const recipients = [
+    settings.ownerEmail ? {email:settings.ownerEmail, name:'Aircraft Owner'} : null,
+    opEmail ? {email:opEmail, name:op} : null
+  ].filter(Boolean);
+
+  for (const r of recipients) {
+    try {
+      await emailjs.send(settings.emailServiceId, settings.emailTemplateId,
+        {to_email:r.email, to_name:r.name, subject, body});
+    } catch(e) { console.warn('Email failed for', r.email, e); }
+  }
+}
+
+// =============================================
+//  ACCOUNTS
+// =============================================
+function addBlock() {
+  const op = document.getElementById('newBlockOp').value;
+  const hrs = parseFloat(document.getElementById('newBlockHrs').value);
+  if (!op||isNaN(hrs)||hrs<=0) { showToast('Enter valid operator and hours','error'); return; }
+  if (!accounts[op]) accounts[op]=[];
+  accounts[op].push({ id:Date.now().toString(), date:new Date().toISOString().split('T')[0], hours:hrs, notes:document.getElementById('newBlockNotes').value.trim() });
+  saveAccountsStore();
+  renderAccounts();
+  document.getElementById('newBlockHrs').value='30';
+  document.getElementById('newBlockNotes').value='';
+  showToast(`✅ Added ${hrs}h block for ${op}`);
+}
+
+function removeBlock(op, idx) {
+  if (!confirm('Remove this prepaid block?')) return;
+  accounts[op].splice(idx,1);
+  saveAccountsStore();
+  renderAccounts();
+}
+
+function renderAccounts() {
+  const el = document.getElementById('accountsList');
+  if (!el) return;
+  let html = '';
+  PREPAID_OPS.forEach(op => {
+    const blocks = accounts[op]||[];
+    const totalBought = blocks.reduce((s,b)=>s+b.hours,0);
+    const used = getUsedHours(op);
+    const remain = Math.max(0,totalBought-used);
+    const pct = totalBought>0 ? Math.min(100,(remain/totalBought)*100) : 0;
+    const fillStyle = pct<10?'background:var(--red)':pct<25?'background:var(--orange)':'background:linear-gradient(90deg,var(--green),var(--amber))';
+    const remColor = pct<10?'var(--red)':pct<25?'var(--orange)':'var(--green)';
+
+    html += `<div class="account-card">
+      <div class="account-name">${op}</div>
+      <div class="account-sub">PREPAID ACCOUNT · ${blocks.length} BLOCK${blocks.length!==1?'S':''}</div>
+      <div class="account-track"><div class="account-fill" style="width:${pct}%;${fillStyle}"></div></div>
+      <div class="account-stats">
+        <div class="account-stat"><div class="account-stat-label">Purchased</div><div class="account-stat-val" style="color:var(--text)">${totalBought.toFixed(1)}<span style="font-size:10px;color:var(--muted)"> hrs</span></div></div>
+        <div class="account-stat"><div class="account-stat-label">Used</div><div class="account-stat-val" style="color:var(--amber)">${used.toFixed(1)}<span style="font-size:10px;color:var(--muted)"> hrs</span></div></div>
+        <div class="account-stat"><div class="account-stat-label">Remaining</div><div class="account-stat-val" style="color:${remColor}">${remain.toFixed(1)}<span style="font-size:10px;color:var(--muted)"> hrs</span></div></div>
+      </div>`;
+    if (blocks.length) {
+      html += `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:8px;">BLOCK HISTORY</div>`;
+      blocks.forEach((b,i) => {
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:rgba(0,0,0,0.2);border-radius:6px;margin-bottom:4px;">
+          <div><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text)">${b.hours} hrs</span>${b.notes?`<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-left:8px;">${b.notes}</span>`:''}</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${b.date}</span>
+            <button onclick="removeBlock('${op}',${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;">✕</button>
+          </div></div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+  });
+  el.innerHTML = html || `<div class="empty-state"><span class="empty-icon">💳</span>No blocks added yet.<br>Add a block below.</div>`;
+}
+
+// =============================================
+//  HISTORY
+// =============================================
+function renderHistory() {
+  const list = document.getElementById('logList');
+  const count = document.getElementById('logCount');
+  const totalTime = flights.reduce((s,f)=>s+(f.hobbsTime||0),0);
+  count.textContent = `${flights.length} flight${flights.length!==1?'s':''} · ${totalTime.toFixed(1)} hrs total`;
+  if (!flights.length) {
+    list.innerHTML = `<div class="empty-state"><span class="empty-icon">🛩</span>No flights logged yet.</div>`;
+    return;
+  }
+  list.innerHTML = flights.map(f => {
+    const route = [f.from,f.to].filter(Boolean).join(' → ')||'—';
+    const hasSquawk = !!f.squawks;
+    return `<div class="log-entry${hasSquawk?' has-squawk':''}" onclick="showDetail('${f.id}')">
+      <div class="log-entry-top">
+        <div>
+          <div class="log-date">${formatDate(f.date)}</div>
+          ${hasSquawk?'<span class="squawk-badge" style="margin-top:4px;display:inline-flex"><span class="squawk-pulse"></span>Squawk</span>':''}
+        </div>
+        <div class="log-meta">
+          <div class="log-route">${route}</div>
+          <div class="log-operator">${f.operator}${f.pic?' · '+f.pic:''}${f.student?' · '+f.student:''}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px;">${f.synced?'🟢 synced':'⚪ local'}</div>
+        </div>
+      </div>
+      <div class="log-meters">
+        <div class="log-meter"><div class="log-meter-label">H.Start</div><div class="log-meter-val">${f.hobbsStart??'—'}</div></div>
+        <div class="log-meter"><div class="log-meter-label">H.End</div><div class="log-meter-val">${f.hobbsEnd??'—'}</div></div>
+        <div class="log-meter"><div class="log-meter-label">Landings</div><div class="log-meter-val">${f.landings||'—'}</div></div>
+        <div class="log-meter"><div class="log-meter-label">Flt Time</div><div class="log-meter-val" style="color:var(--amber)">${f.hobbsTime?f.hobbsTime+'h':'—'}</div></div>
+      </div>
+      ${hasSquawk?`<div class="log-squawk">⚠️ ${f.squawks.substring(0,120)}${f.squawks.length>120?'...':''}</div>`:''}
+      ${f.purpose?`<div class="log-purpose">📋 ${f.purpose}</div>`:''}
+      ${f.notes?`<div class="log-notes">${f.notes.substring(0,100)}${f.notes.length>100?'...':''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function showDetail(id) {
+  const f = flights.find(x=>x.id===id);
+  if (!f) return;
+  const r = [f.from,f.to].filter(Boolean).join(' → ')||'—';
+  alert(`N96455 — FLIGHT DETAIL\n${formatDate(f.date)}\n\nOperator : ${f.operator}\nPIC      : ${f.pic}${f.student?'\nStudent  : '+f.student:''}${f.purpose?'\nPurpose  : '+f.purpose:''}\nRoute    : ${r}\n\nHobbs: ${f.hobbsStart} → ${f.hobbsEnd}  (${f.hobbsTime} hrs)\nTach : ${f.tachStart??'—'} → ${f.tachEnd??'—'}${f.tachTime?' ('+f.tachTime+' hrs)':''}\nLandings: ${f.landings||0}\nFuel: ${f.fuel} gal ${f.fuelType}   Oil: ${f.oil} qt\n${f.squawks?'\n⚠️ SQUAWKS:\n'+f.squawks+'\n':''}${f.notes?'\nNotes:\n'+f.notes:''}`);
+}
+
+function updateTotalHobbs() {
+  if (!flights.length) { document.getElementById('totalHobbsDisplay').textContent=''; return; }
+  const latest = [...flights].sort((a,b)=>(b.hobbsEnd||0)-(a.hobbsEnd||0))[0];
+  if (latest?.hobbsEnd) document.getElementById('totalHobbsDisplay').textContent = `HOBBS: ${latest.hobbsEnd}`;
+}
+
+// =============================================
+//  EXPORT
+// =============================================
+function exportCSV() {
+  if (!flights.length) { showToast('No flights to export','warn'); return; }
+  const hdrs = ['Date','Operator','PIC','Student','From','To','Purpose','HobbsStart','HobbsEnd','HobbsTime','TachStart','TachEnd','TachTime','Landings','FuelAdded','OilAdded','FuelType','Squawks','Notes'];
+  const rows = flights.map(f=>[
+    f.date,f.operator,f.pic,f.student||'',f.from,f.to,f.purpose||'',
+    f.hobbsStart,f.hobbsEnd,f.hobbsTime,
+    f.tachStart??'',f.tachEnd??'',f.tachTime??'',
+    f.landings,f.fuel,f.oil,f.fuelType,
+    `"${(f.squawks||'').replace(/"/g,'""')}"`,
+    `"${(f.notes||'').replace(/"/g,'""')}"`
+  ].join(','));
+  const blob = new Blob([[hdrs.join(','),...rows].join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `N96455_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  showToast('📥 CSV exported');
+}
+
+// =============================================
+//  UTILS
+// =============================================
+function formatDate(d) {
+  if (!d) return '—';
+  const p = d.split('-');
+  const m=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  return `${p[2]} ${m[parseInt(p[1])-1]} ${p[0]}`;
+}
+
+function clearForm(skipPrefill) {
+  document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+  ['fOperator','fPIC','fStudent','fPurpose','hobbsEnd','tachEnd','fLandings','fFuel','fOil','fSquawks','fNotes'].forEach(id => {
+    document.getElementById(id).value='';
+  });
+  document.getElementById('fFrom').value='P19';
+  document.getElementById('fTo').value='P19';
+  document.getElementById('fSquawks').className='';
+  document.getElementById('squawkBadgeWrap').style.display='none';
+  document.getElementById('balanceBar').style.display='none';
+  computeTimes();
+  ['hobbs','tach'].forEach(t => retakePhoto(t));
+  if (!skipPrefill) prefillStartFromLast();
+  else { prefillStartFromLast(); }
+}
+
+let toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type?(' '+type):'') + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 3800);
+}
+
+// =============================================
+//  MAINTENANCE
+// =============================================
+let maintItems = [];
+
+function saveMaint() {
+  localStorage.setItem('n96455_maint', JSON.stringify(maintItems));
+}
+
+// Push all maintItems to Airtable Maintenance table (upsert by Name)
+async function syncMaintToAirtable() {
+  if (!settings.airtableKey || !settings.airtableBase) return;
+  const table = encodeURIComponent('Maintenance');
+  const base = settings.airtableBase;
+  const headers = { 'Authorization': `Bearer ${settings.airtableKey}`, 'Content-Type': 'application/json' };
+
+  // Fetch existing records to find record IDs by Name
+  let existingMap = {};
+  try {
+    const r = await fetch(`https://api.airtable.com/v0/${base}/${table}?fields%5B%5D=Name`, { headers });
+    if (r.ok) {
+      const d = await r.json();
+      d.records.forEach(rec => { existingMap[rec.fields.Name] = rec.id; });
+    }
+  } catch(e) {}
+
+  for (const item of maintItems) {
+    const fields = {
+      Name: item.name,
+      Type: item.type,
+      Interval: item.interval,
+      LastTach: item.lastTach || null,
+      LastDate: item.lastDate || null,
+      Notes: item.notes || '',
+      ItemID: item.id
+    };
+    // Remove nulls
+    Object.keys(fields).forEach(k => { if (fields[k] === null) delete fields[k]; });
+
+    try {
+      if (existingMap[item.name]) {
+        // Update existing
+        await fetch(`https://api.airtable.com/v0/${base}/${table}/${existingMap[item.name]}`, {
+          method: 'PATCH', headers, body: JSON.stringify({ fields })
+        });
+      } else {
+        // Create new
+        await fetch(`https://api.airtable.com/v0/${base}/${table}`, {
+          method: 'POST', headers, body: JSON.stringify({ fields })
+        });
+      }
+    } catch(e) { console.warn('Maint sync failed for', item.name, e); }
+  }
+}
+
+// Load maintItems FROM Airtable (used on app start)
+async function loadMaintFromAirtable() {
+  if (!settings.airtableKey || !settings.airtableBase) return false;
+  const table = encodeURIComponent('Maintenance');
+  const base = settings.airtableBase;
+  try {
+    const r = await fetch(`https://api.airtable.com/v0/${base}/${table}`, {
+      headers: { 'Authorization': `Bearer ${settings.airtableKey}` }
+    });
+    if (!r.ok) return false;
+    const d = await r.json();
+    if (!d.records || d.records.length === 0) return false;
+
+    maintItems = d.records.map(rec => ({
+      id: rec.fields.ItemID || rec.id,
+      name: rec.fields.Name || '',
+      type: rec.fields.Type || 'tach',
+      interval: rec.fields.Interval || 50,
+      lastTach: rec.fields.LastTach || null,
+      lastDate: rec.fields.LastDate || null,
+      notes: rec.fields.Notes || '',
+      _airtableId: rec.id
+    }));
+
+    // Cache locally
+    localStorage.setItem('n96455_maint', JSON.stringify(maintItems));
+    return true;
+  } catch(e) { return false; }
+}
+
+function defaultMaintItems() {
+  return [
+    { id:'1', name:'Oil Change', type:'tach', interval:50, lastTach:null, lastDate:null, notes:'Aeroshell W80 Plus' },
+    { id:'2', name:'Annual Inspection', type:'date', interval:365, lastTach:null, lastDate:null, notes:'' },
+    { id:'3', name:'ELT Battery', type:'date', interval:730, lastTach:null, lastDate:null, notes:'Check expiry date on battery' },
+    { id:'4', name:'Transponder Check', type:'date', interval:730, lastTach:null, lastDate:null, notes:'24-month requirement' },
+    { id:'5', name:'Altimeter/Static', type:'date', interval:730, lastTach:null, lastDate:null, notes:'24-month requirement' },
+    { id:'6', name:'Spark Plugs', type:'tach', interval:100, lastTach:null, lastDate:null, notes:'Rotate at 50hr, replace at 100hr' },
+    { id:'7', name:'Engine TBO', type:'tach', interval:2000, lastTach:null, lastDate:null, notes:'O-470 TBO 2000hrs — track from major overhaul tach reading' },
+  ];
+}
+
+function getCurrentTach() {
+  if (!flights.length) return null;
+  const latest = [...flights].sort((a,b)=>(b.tachEnd||0)-(a.tachEnd||0))[0];
+  return latest?.tachEnd || null;
+}
+
+function getMaintStatus(item) {
+  const curTach = getCurrentTach();
+  const today = new Date();
+  let tachStatus = null, dateStatus = null;
+
+  if ((item.type === 'tach' || item.type === 'both') && item.lastTach && item.interval) {
+    const dueTach = item.lastTach + item.interval;
+    const remaining = dueTach - (curTach || item.lastTach);
+    const pct = Math.max(0, Math.min(100, (remaining / item.interval) * 100));
+    tachStatus = { due: dueTach, remaining, pct, overdue: remaining <= 0 };
+  }
+
+  if ((item.type === 'date' || item.type === 'both') && item.lastDate && item.interval) {
+    const last = new Date(item.lastDate);
+    const dueDate = new Date(last);
+    dueDate.setDate(dueDate.getDate() + item.interval);
+    const daysRemaining = Math.round((dueDate - today) / (1000 * 60 * 60 * 24));
+    const pct = Math.max(0, Math.min(100, (daysRemaining / item.interval) * 100));
+    dateStatus = { dueDate, daysRemaining, pct, overdue: daysRemaining <= 0 };
+  }
+
+  // Overall status
+  const overdue = tachStatus?.overdue || dateStatus?.overdue;
+  const soon = !overdue && (
+    (tachStatus && tachStatus.remaining <= item.interval * 0.15) ||
+    (dateStatus && dateStatus.daysRemaining <= 30)
+  );
+  const noData = !tachStatus && !dateStatus;
+
+  return { tachStatus, dateStatus, overdue, soon, noData };
+}
+
+async function renderMaint() {
+  const alertEl = document.getElementById('maintAlerts');
+  const listEl = document.getElementById('maintList');
+
+  // Always try to refresh from Airtable when tab is opened
+  const listEl2 = document.getElementById('maintList');
+  if (listEl2) listEl2.innerHTML = '<div class="empty-state"><span class="empty-icon" style="font-size:24px">⏳</span>Loading...</div>';
+  const fromAt = await loadMaintFromAirtable();
+  if (!fromAt && !maintItems.length) {
+    try {
+      const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
+      maintItems = mx || defaultMaintItems();
+    } catch(e) { maintItems = defaultMaintItems(); }
+  }
+
+  const curTach = getCurrentTach();
+
+  // Alerts
+  const dueItems = maintItems.filter(i => {
+    const s = getMaintStatus(i);
+    return s.overdue || s.soon;
+  });
+
+  if (dueItems.length) {
+    alertEl.innerHTML = `<div class="due-alert">
+      <div class="due-alert-title">⚠️ ${dueItems.length} ITEM${dueItems.length>1?'S':''} DUE / UPCOMING</div>
+      ${dueItems.map(i => {
+        const s = getMaintStatus(i);
+        const tag = s.overdue ? '🔴 OVERDUE' : '🟡 DUE SOON';
+        return `<div class="due-alert-item">${tag} — ${i.name}</div>`;
+      }).join('')}
+    </div>`;
+  } else {
+    alertEl.innerHTML = '';
+  }
+
+  // Items
+  if (!maintItems.length) {
+    listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">🔧</span>No maintenance items yet.<br>Add one below.</div>';
+    return;
+  }
+
+  listEl.innerHTML = maintItems.map((item, idx) => {
+    const s = getMaintStatus(item);
+    const statusClass = s.overdue ? 'due' : s.soon ? 'soon' : s.noData ? '' : 'ok';
+    const badgeClass = s.overdue ? 'due' : s.soon ? 'soon' : 'ok';
+    const badgeText = s.overdue ? 'OVERDUE' : s.soon ? 'DUE SOON' : s.noData ? 'NO DATA' : 'OK';
+    const nameColor = s.overdue ? 'var(--red)' : s.soon ? 'var(--orange)' : s.noData ? 'var(--muted)' : 'var(--green)';
+
+    let statsHTML = '';
+    let progressHTML = '';
+
+    if (s.tachStatus) {
+      const fillColor = s.tachStatus.overdue ? 'var(--red)' : s.tachStatus.pct < 20 ? 'var(--orange)' : 'var(--green)';
+      progressHTML += `
+        <div style="margin-bottom:4px;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">TACH</div>
+          <div class="maint-progress"><div class="maint-fill" style="width:${s.tachStatus.pct}%;background:${fillColor}"></div></div>
+        </div>`;
+      statsHTML += `
+        <div class="maint-stat">
+          <div class="maint-stat-label">Last Done</div>
+          <div class="maint-stat-val" style="color:var(--muted)">${item.lastTach || '—'}</div>
+        </div>
+        <div class="maint-stat">
+          <div class="maint-stat-label">Due At</div>
+          <div class="maint-stat-val" style="color:var(--text)">${s.tachStatus.due.toFixed(1)}</div>
+        </div>
+        <div class="maint-stat">
+          <div class="maint-stat-label">${s.tachStatus.overdue ? 'Overdue' : 'Remaining'}</div>
+          <div class="maint-stat-val" style="color:${fillColor}">${Math.abs(s.tachStatus.remaining).toFixed(1)} hrs</div>
+        </div>`;
+    }
+
+    if (s.dateStatus) {
+      const fillColor = s.dateStatus.overdue ? 'var(--red)' : s.dateStatus.pct < 20 ? 'var(--orange)' : 'var(--green)';
+      const dueStr = s.dateStatus.dueDate.toISOString().split('T')[0];
+      progressHTML += `
+        <div style="margin-bottom:4px;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">CALENDAR</div>
+          <div class="maint-progress"><div class="maint-fill" style="width:${s.dateStatus.pct}%;background:${fillColor}"></div></div>
+        </div>`;
+      statsHTML += `
+        <div class="maint-stat">
+          <div class="maint-stat-label">Last Done</div>
+          <div class="maint-stat-val" style="color:var(--muted);font-size:11px;">${item.lastDate ? formatDate(item.lastDate) : '—'}</div>
+        </div>
+        <div class="maint-stat">
+          <div class="maint-stat-label">Due</div>
+          <div class="maint-stat-val" style="color:var(--text);font-size:11px;">${formatDate(dueStr)}</div>
+        </div>
+        <div class="maint-stat">
+          <div class="maint-stat-label">${s.dateStatus.overdue ? 'Overdue' : 'Days Left'}</div>
+          <div class="maint-stat-val" style="color:${fillColor}">${Math.abs(s.dateStatus.daysRemaining)}d</div>
+        </div>`;
+    }
+
+    if (s.noData) {
+      statsHTML = `<div class="maint-stat" style="grid-column:span 3">
+        <div class="maint-stat-label">No last-done data entered</div>
+        <div class="maint-stat-val" style="color:var(--muted);font-size:11px;">Tap "Mark Done" to start tracking</div>
+      </div>`;
+    }
+
+    return `<div class="maint-item ${statusClass}">
+      <div class="maint-header">
+        <div class="maint-name" style="color:${nameColor}">${item.name}</div>
+        <span class="maint-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;">
+        Every ${item.interval} ${item.type === 'tach' ? 'tach hrs' : item.type === 'date' ? 'days' : 'tach hrs / days'}
+        ${item.notes ? ' · ' + item.notes : ''}
+      </div>
+      ${progressHTML}
+      <div class="maint-stats">${statsHTML}</div>
+      <div class="maint-actions">
+        <button class="maint-btn primary" onclick="markMaintDone(${idx})">✓ Mark Done</button>
+        <button class="maint-btn" onclick="editMaintItem(${idx})">Edit</button>
+        <button class="maint-btn" style="color:var(--red);border-color:var(--red)" onclick="deleteMaintItem(${idx})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addMaintItem() {
+  const name = document.getElementById('mNewName').value.trim();
+  const type = document.getElementById('mNewType').value;
+  const interval = parseFloat(document.getElementById('mNewInterval').value);
+  const lastTach = parseFloat(document.getElementById('mNewLastTach').value);
+  const lastDate = document.getElementById('mNewLastDate').value;
+  const notes = document.getElementById('mNewNotes').value.trim();
+
+  if (!name) { showToast('Item name is required', 'error'); return; }
+  if (isNaN(interval) || interval <= 0) { showToast('Enter a valid interval', 'error'); return; }
+
+  maintItems.push({
+    id: Date.now().toString(), name, type, interval,
+    lastTach: isNaN(lastTach) ? null : lastTach,
+    lastDate: lastDate || null,
+    notes
+  });
+  saveMaint();
+  if (navigator.onLine) { syncMaintToAirtable(); }
+  else { enqueue('maint', {}); }
+
+  // Clear form
+  ['mNewName','mNewInterval','mNewLastTach','mNewNotes'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('mNewLastDate').value='';
+  document.getElementById('mNewType').value='tach';
+
+  renderMaint();
+  showToast('✅ Maintenance item added & synced');
+}
+
+function markMaintDone(idx) {
+  const item = maintItems[idx];
+  const curTach = getCurrentTach();
+  const today = new Date().toISOString().split('T')[0];
+
+  // Build a modal with proper inputs
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+  const needsTach = item.type === 'tach' || item.type === 'both';
+  const needsDate = item.type === 'date' || item.type === 'both';
+
+  modal.innerHTML = `
+    <div style="background:#0d1b3e;border:1px solid rgba(90,120,200,0.3);border-radius:16px;padding:24px;width:100%;max-width:360px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#f5a623;letter-spacing:2px;margin-bottom:6px;">MARK DONE</div>
+      <div style="font-family:'DM Mono',monospace;font-size:11px;color:#7986b0;margin-bottom:20px;letter-spacing:1px;">${item.name}</div>
+      ${needsTach ? `
+        <div style="margin-bottom:16px;">
+          <label style="font-family:'DM Mono',monospace;font-size:10px;color:#7986b0;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:6px;">Tach Reading When Done</label>
+          <input id="mdTach" type="number" step="0.1" value="${item.lastTach || curTach || ''}" placeholder="${curTach || 'Enter tach reading'}"
+            style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(90,120,200,0.3);border-radius:8px;color:#e8eaf6;font-family:'DM Mono',monospace;font-size:16px;padding:10px 12px;outline:none;">
+        </div>` : ''}
+      ${needsDate ? `
+        <div style="margin-bottom:20px;">
+          <label style="font-family:'DM Mono',monospace;font-size:10px;color:#7986b0;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:6px;">Date When Done</label>
+          <input id="mdDate" type="date" value="${item.lastDate || today}"
+            style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(90,120,200,0.3);border-radius:8px;color:#e8eaf6;font-family:'DM Mono',monospace;font-size:16px;padding:10px 12px;outline:none;">
+        </div>` : ''}
+      <div style="display:flex;gap:10px;">
+        <button onclick="this.closest('.maint-modal').remove()" 
+          style="flex:1;padding:12px;background:transparent;border:1px solid rgba(90,120,200,0.3);border-radius:8px;color:#7986b0;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;">
+          Cancel
+        </button>
+        <button id="mdSaveBtn"
+          style="flex:2;padding:12px;background:#f5a623;border:none;border-radius:8px;color:#0a0f1e;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;cursor:pointer;">
+          SAVE
+        </button>
+      </div>
+    </div>`;
+
+  modal.className = 'maint-modal';
+  document.body.appendChild(modal);
+
+  // Focus first input
+  setTimeout(() => {
+    const first = modal.querySelector('input');
+    if (first) first.focus();
+  }, 100);
+
+  // Save handler
+  modal.querySelector('#mdSaveBtn').onclick = () => {
+    if (needsTach) {
+      const tVal = parseFloat(document.getElementById('mdTach')?.value);
+      if (isNaN(tVal)) { showToast('Enter a valid tach reading', 'error'); return; }
+      item.lastTach = tVal;
+    }
+    if (needsDate) {
+      const dVal = document.getElementById('mdDate')?.value;
+      if (!dVal) { showToast('Enter a valid date', 'error'); return; }
+      item.lastDate = dVal;
+    }
+    modal.remove();
+    saveMaint();
+    if (navigator.onLine) { syncMaintToAirtable(); } else { enqueue('maint', {}); }
+    renderMaint();
+    const stillDue = maintItems.filter(i => { const s=getMaintStatus(i); return s.overdue||s.soon; });
+    updateMaintTabBadge(stillDue.length);
+    showToast(`✅ ${item.name} marked done & synced`);
+  };
+
+  // Close on backdrop click
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function editMaintItem(idx) {
+  const item = maintItems[idx];
+  const newInterval = prompt(`Edit interval for "${item.name}" (current: ${item.interval}):`, item.interval);
+  if (newInterval === null) return;
+  const newNotes = prompt('Notes:', item.notes || '');
+  if (newNotes === null) return;
+  item.interval = parseFloat(newInterval) || item.interval;
+  item.notes = newNotes;
+  saveMaint();
+  if (navigator.onLine) { syncMaintToAirtable(); } else { enqueue('maint', {}); }
+  renderMaint();
+  showToast('✅ Item updated' + (navigator.onLine ? ' & synced' : ' — will sync when online'));
+}
+
+async function deleteMaintItem(idx) {
+  const item = maintItems[idx];
+  if (!confirm(`Delete "${item.name}"?`)) return;
+
+  // Delete from Airtable if we have an airtable ID
+  if (item._airtableId && settings.airtableKey && settings.airtableBase) {
+    try {
+      const table = encodeURIComponent('Maintenance');
+      await fetch(`https://api.airtable.com/v0/${settings.airtableBase}/${table}/${item._airtableId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${settings.airtableKey}` }
+      });
+    } catch(e) { console.warn('Airtable delete failed', e); }
+  }
+
+  maintItems.splice(idx, 1);
+  saveMaint();
+  renderMaint();
+  showToast('🗑 Item deleted');
+}
+
+// Check maintenance alerts on load and show banner if anything is due
+async function checkMaintAlerts() {
+  // Try Airtable first (cross-device sync), fall back to localStorage
+  const fromAirtable = await loadMaintFromAirtable();
+
+  if (!fromAirtable) {
+    try {
+      const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
+      maintItems = mx || defaultMaintItems();
+      if (!mx) {
+        localStorage.setItem('n96455_maint', JSON.stringify(maintItems));
+        // Seed Airtable with defaults on first run
+        syncMaintToAirtable();
+      }
+    } catch(e) { maintItems = defaultMaintItems(); }
+  }
+
+  const dueItems = maintItems.filter(i => {
+    const s = getMaintStatus(i);
+    return s.overdue || s.soon;
+  });
+
+  // Show/hide red badge on Maint tab
+  updateMaintTabBadge(dueItems.length);
+
+  if (dueItems.length) {
+    showToast(`🔧 ${dueItems.length} maintenance item${dueItems.length>1?'s':''} due/upcoming`, 'warn');
+  }
+}
+
+function updateMaintTabBadge(count) {
+  const tab = document.getElementById('maintTab');
+  if (!tab) return;
+  // Remove existing badge if any
+  const existing = tab.querySelector('.tab-badge');
+  if (existing) existing.remove();
+  if (count > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'tab-badge';
+    badge.title = count + ' item' + (count>1?'s':'') + ' due/upcoming';
+    tab.appendChild(badge);
+  }
+}
+
+</script>
+</body>
+</html>  .balance-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+  .balance-title { font-family:'Bebas Neue',sans-serif; font-size:16px; color:var(--amber); letter-spacing:2px; }
+  .balance-track { height:8px; background:rgba(0,0,0,0.4); border-radius:4px; overflow:hidden; margin-bottom:8px; }
+  .balance-fill { height:100%; border-radius:4px; transition:width 0.6s ease; background:linear-gradient(90deg,var(--green),var(--amber)); }
+  .balance-fill.warn { background:linear-gradient(90deg,var(--orange),var(--red)); }
+  .balance-numbers { display:flex; justify-content:space-between; font-family:'DM Mono',monospace; font-size:11px; }
+  .balance-used { color:var(--muted); }
+  .balance-remain { color:var(--green); }
+  .balance-remain.warn { color:var(--orange); }
+  .balance-remain.crit { color:var(--red); }
+
+  /* TABS */
+  .tabs { display:flex; gap:4px; background:rgba(0,0,0,0.3); border-radius:12px; padding:4px; margin-bottom:20px; }
+  .tab { flex:1; padding:9px 6px; border:none; background:transparent; color:var(--muted); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; border-radius:9px; cursor:pointer; transition:all 0.2s; }
+  .tab.active { background:var(--cloud); color:var(--amber); box-shadow:var(--glow); }
+  .panel { display:none; animation:fadeUp 0.3s ease; }
+  .panel.active { display:block; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
+
+  /* CARDS */
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:14px; backdrop-filter:blur(12px); }
+  .card-title { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .card-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* DUAL PHOTO */
+  .photo-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .photo-zone-wrap { display:flex; flex-direction:column; gap:6px; }
+  .photo-zone-label { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; text-align:center; }
+  .photo-zone {
+    border:2px dashed var(--border); border-radius:12px;
+    padding:20px 10px; text-align:center; cursor:pointer;
+    transition:all 0.3s; position:relative; overflow:hidden;
+    min-height:110px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .photo-zone:hover,.photo-zone.drag-over { border-color:var(--amber); background:rgba(245,166,35,0.05); }
+  .photo-zone.has-image { border-style:solid; border-color:var(--green); padding:0; }
+  .photo-zone img { width:100%; border-radius:10px; display:block; max-height:160px; object-fit:cover; }
+  .photo-icon { font-size:24px; margin-bottom:5px; display:block; }
+  .photo-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:1px; line-height:1.4; }
+  .photo-input { display:none; }
+  .ocr-overlay { position:absolute; inset:0; background:rgba(10,15,30,0.88); display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:10px; gap:8px; }
+  .ocr-spinner { width:24px;height:24px; border:3px solid var(--border); border-top-color:var(--amber); border-radius:50%; animation:spin 0.8s linear infinite; }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .ocr-text { font-family:'DM Mono',monospace; font-size:9px; color:var(--amber); letter-spacing:2px; }
+  .photo-retake { position:absolute; bottom:5px; right:5px; background:rgba(10,15,30,0.85); border:1px solid var(--border); color:var(--muted); font-size:9px; padding:3px 7px; border-radius:20px; cursor:pointer; font-family:'DM Mono',monospace; letter-spacing:1px; z-index:2; }
+  .photo-retake:hover { color:var(--amber); border-color:var(--amber); }
+
+  /* FORM */
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+  .field-row.single { grid-template-columns:1fr; }
+  .field-row.triple { grid-template-columns:1fr 1fr 1fr; }
+  .field { display:flex; flex-direction:column; gap:5px; }
+  .field label { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; display:flex; align-items:center; gap:5px; }
+  .req { color:var(--red); }
+  .opt { color:var(--muted); font-size:9px; }
+  .field input,.field textarea,.field select {
+    background:rgba(0,0,0,0.3); border:1px solid var(--border);
+    border-radius:8px; color:var(--text);
+    font-family:'DM Mono',monospace; font-size:14px;
+    padding:10px 12px; transition:all 0.2s; outline:none;
+    -webkit-appearance:none; width:100%;
+  }
+  .field select option { background:#0d1b3e; }
+  .field input:focus,.field textarea:focus,.field select:focus { border-color:var(--amber); box-shadow:0 0 0 3px rgba(245,166,35,0.1); }
+  .field input.ai-filled { border-color:var(--green); color:var(--green); background:rgba(0,229,160,0.05); }
+  .field input.auto-prev { border-color:rgba(90,120,200,0.4); color:var(--muted); background:rgba(90,120,200,0.06); }
+  .field textarea { resize:vertical; min-height:78px; font-size:13px; line-height:1.5; }
+  .field textarea.squawk-active { border-color:var(--orange)!important; background:rgba(255,140,66,0.07)!important; box-shadow:0 0 0 3px rgba(255,140,66,0.12); }
+
+  .computed-row { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(0,0,0,0.2); border-radius:8px; border:1px solid var(--border); margin-bottom:10px; }
+  .computed-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+  .computed-value { font-family:'DM Mono',monospace; font-size:18px; color:var(--amber); }
+  .computed-value.zero { color:var(--muted); }
+
+  .squawk-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(255,140,66,0.15); border:1px solid var(--orange); color:var(--orange); font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1.5px; padding:3px 8px; border-radius:20px; text-transform:uppercase; }
+  .squawk-pulse { width:6px;height:6px; border-radius:50%; background:var(--orange); animation:pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.8);}}
+
+  /* BUTTONS */
+  .btn { width:100%; padding:15px; border:none; border-radius:12px; font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:3px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:10px; }
+  .btn-primary { background:var(--amber); color:var(--sky); }
+  .btn-primary:hover { background:#ffc15e; transform:translateY(-1px); }
+  .btn-primary:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+  .btn-secondary { background:transparent; color:var(--muted); border:1px solid var(--border); font-size:13px; font-family:'DM Mono',monospace; letter-spacing:1px; padding:10px; margin-top:8px; }
+  .btn-secondary:hover { border-color:var(--amber); color:var(--amber); }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(100px); background:var(--cloud); border:1px solid var(--green); color:var(--green); font-family:'DM Mono',monospace; font-size:12px; letter-spacing:1.5px; padding:14px 24px; border-radius:40px; transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); z-index:100; max-width:90vw; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.4); }
+  .toast.error { border-color:var(--red); color:var(--red); }
+  .toast.warn { border-color:var(--orange); color:var(--orange); }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* HISTORY */
+  .log-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
+  .log-count { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); letter-spacing:1px; }
+  .log-entry { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:15px; margin-bottom:10px; cursor:pointer; transition:all 0.2s; backdrop-filter:blur(8px); }
+  .log-entry:hover { border-color:var(--amber); transform:translateX(3px); }
+  .log-entry.has-squawk { border-left:3px solid var(--orange); }
+  .log-entry-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+  .log-date { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--amber); letter-spacing:2px; }
+  .log-meta { text-align:right; }
+  .log-route { font-family:'DM Mono',monospace; font-size:11px; color:var(--green); letter-spacing:1px; }
+  .log-operator { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-top:3px; }
+  .log-meters { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px; }
+  .log-meter { text-align:center; background:rgba(0,0,0,0.2); border-radius:6px; padding:5px 3px; }
+  .log-meter-label { font-family:'DM Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; }
+  .log-meter-val { font-family:'DM Mono',monospace; font-size:12px; color:var(--text); margin-top:2px; }
+  .log-squawk { font-size:12px; color:var(--orange); font-style:italic; margin-top:5px; line-height:1.4; }
+  .log-notes { font-size:12px; color:var(--muted); font-style:italic; margin-top:5px; line-height:1.4; }
+  .log-purpose { font-family:'DM Mono',monospace; font-size:10px; color:rgba(90,120,200,0.7); margin-top:4px; letter-spacing:1px; }
+
+  /* ACCOUNTS */
+  .account-card { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:12px; backdrop-filter:blur(10px); }
+  .account-name { font-family:'Bebas Neue',sans-serif; font-size:26px; color:var(--amber); letter-spacing:3px; }
+  .account-sub { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; margin-bottom:12px; }
+  .account-track { height:10px; background:rgba(0,0,0,0.4); border-radius:5px; overflow:hidden; margin:10px 0 6px; }
+  .account-fill { height:100%; border-radius:5px; transition:width 0.8s ease; }
+  .account-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:12px; }
+  .account-stat { text-align:center; background:rgba(0,0,0,0.2); border-radius:8px; padding:10px 6px; }
+  .account-stat-label { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px; }
+  .account-stat-val { font-family:'DM Mono',monospace; font-size:16px; }
+
+  /* SETTINGS */
+  .settings-note { font-size:12px; color:var(--muted); line-height:1.6; padding:12px; background:rgba(0,0,0,0.2); border-radius:8px; border-left:3px solid var(--amber); margin-bottom:12px; }
+  .settings-note a { color:var(--amber); text-decoration:none; }
+  .steps { counter-reset:step; }
+  .step { display:flex; gap:12px; margin-bottom:11px; align-items:flex-start; }
+  .step-num { counter-increment:step; background:var(--amber); color:var(--sky); font-family:'Bebas Neue',sans-serif; font-size:13px; width:24px;height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .step-num::before { content:counter(step); }
+  .step-text { font-size:12px; color:var(--text); line-height:1.6; padding-top:2px; }
+  .step-text code { background:rgba(0,0,0,0.4); padding:1px 6px; border-radius:4px; font-family:'DM Mono',monospace; font-size:10px; color:var(--amber); }
+  .status-dot { display:inline-block; width:8px;height:8px; border-radius:50%; margin-right:5px; }
+  .status-dot.ok { background:var(--green); box-shadow:0 0 8px var(--green); }
+  .status-dot.error { background:var(--red); }
+  .status-dot.pending { background:var(--muted); }
+  .empty-state { text-align:center; padding:48px 24px; color:var(--muted); font-family:'DM Mono',monospace; font-size:13px; letter-spacing:1px; line-height:2; }
+  .empty-icon { font-size:40px; margin-bottom:12px; display:block; opacity:0.5; }
+
+
+  /* MAINTENANCE */
+  .maint-item { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:15px; margin-bottom:10px; backdrop-filter:blur(8px); transition:all 0.2s; }
+  .maint-item.due { border-color:var(--red); background:rgba(255,77,109,0.06); }
+  .maint-item.soon { border-color:var(--orange); background:rgba(255,140,66,0.06); }
+  .maint-item.ok { border-color:var(--green); }
+  .maint-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .maint-name { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; }
+  .maint-badge { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1.5px; padding:3px 10px; border-radius:20px; text-transform:uppercase; }
+  .maint-badge.due { background:rgba(255,77,109,0.2); color:var(--red); border:1px solid var(--red); }
+  .maint-badge.soon { background:rgba(255,140,66,0.2); color:var(--orange); border:1px solid var(--orange); }
+  .maint-badge.ok { background:rgba(0,229,160,0.1); color:var(--green); border:1px solid var(--green); }
+  .maint-progress { height:6px; background:rgba(0,0,0,0.3); border-radius:3px; overflow:hidden; margin:8px 0; }
+  .maint-fill { height:100%; border-radius:3px; transition:width 0.6s ease; }
+  .maint-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px; }
+  .maint-stat { text-align:center; background:rgba(0,0,0,0.2); border-radius:6px; padding:8px 4px; }
+  .maint-stat-label { font-family:'DM Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:3px; }
+  .maint-stat-val { font-family:'DM Mono',monospace; font-size:13px; }
+  .maint-actions { display:flex; gap:8px; margin-top:12px; }
+  .maint-btn { flex:1; padding:9px; border:1px solid var(--border); background:transparent; color:var(--muted); border-radius:8px; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; cursor:pointer; transition:all 0.2s; }
+  .maint-btn:hover { border-color:var(--amber); color:var(--amber); }
+  .maint-btn.primary { background:var(--amber); color:var(--sky); border-color:var(--amber); font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:2px; }
+  .maint-add-form { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:14px; backdrop-filter:blur(12px); }
+  .due-alert { background:rgba(255,77,109,0.1); border:1px solid var(--red); border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+  .due-alert-title { font-family:'Bebas Neue',sans-serif; font-size:16px; color:var(--red); letter-spacing:2px; margin-bottom:6px; }
+  .due-alert-item { font-family:'DM Mono',monospace; font-size:11px; color:var(--text); margin-bottom:3px; }
+
+
+  .tab-badge { display:inline-block; width:8px; height:8px; background:var(--red); border-radius:50%; margin-left:5px; vertical-align:middle; box-shadow:0 0 6px var(--red); animation:pulse 1.5s ease-in-out infinite; }
+
+  @media(max-width:480px) {
+    .field-row { grid-template-columns:1fr; }
+    .field-row.triple { grid-template-columns:1fr 1fr; }
+    .log-meters { grid-template-columns:repeat(2,1fr); }
+    .account-stats { grid-template-columns:1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="tail-number">N96455</div>
+      <div class="aircraft-info">
+        <div class="aircraft-model">Cessna C182</div>
+        <div class="aircraft-sub">DRY LEASE FLIGHT LOG</div>
+        <div class="hobbs-display" id="totalHobbsDisplay"></div>
       </div>
     </div>
   </div>
