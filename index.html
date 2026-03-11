@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>N96455 · Flight Log</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="N96455">
+<meta name="theme-color" content="#0a0f1e">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -822,7 +827,74 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('offlineIndicator').style.display = 'block';
   }
 });
-function saveAccountsStore() { localStorage.setItem('n96455_accounts', JSON.stringify(accounts)); }
+function saveAccountsStore() {
+  localStorage.setItem('n96455_accounts', JSON.stringify(accounts));
+  syncAccountsToAirtable();
+}
+
+async function syncAccountsToAirtable() {
+  if (!settings.airtableKey || !settings.airtableBase || !navigator.onLine) return;
+  const table = encodeURIComponent('Accounts');
+  const base = settings.airtableBase;
+  const headers = { 'Authorization': `Bearer ${settings.airtableKey}`, 'Content-Type': 'application/json' };
+
+  // Fetch existing records
+  let existingMap = {};
+  try {
+    const r = await fetch(`https://api.airtable.com/v0/${base}/${table}`, { headers });
+    if (r.ok) {
+      const d = await r.json();
+      d.records.forEach(rec => { existingMap[rec.fields.BlockID] = rec.id; });
+    }
+  } catch(e) { return; }
+
+  for (const op of PREPAID_OPS) {
+    for (const block of (accounts[op]||[])) {
+      const fields = { Operator: op, Hours: block.hours, Date: block.date, Notes: block.notes||'', BlockID: block.id };
+      try {
+        if (existingMap[block.id]) {
+          await fetch(`https://api.airtable.com/v0/${base}/${table}/${existingMap[block.id]}`, {
+            method: 'PATCH', headers, body: JSON.stringify({ fields })
+          });
+        } else {
+          await fetch(`https://api.airtable.com/v0/${base}/${table}`, {
+            method: 'POST', headers, body: JSON.stringify({ fields })
+          });
+        }
+      } catch(e) {}
+    }
+  }
+}
+
+async function loadAccountsFromAirtable() {
+  if (!settings.airtableKey || !settings.airtableBase || !navigator.onLine) return false;
+  try {
+    const table = encodeURIComponent('Accounts');
+    const r = await fetch(`https://api.airtable.com/v0/${settings.airtableBase}/${table}`, {
+      headers: { 'Authorization': `Bearer ${settings.airtableKey}` }
+    });
+    if (!r.ok) return false;
+    const d = await r.json();
+    if (!d.records || !d.records.length) return false;
+    // Rebuild accounts object
+    const newAccounts = { Zoltan: [], NGFT: [] };
+    d.records.forEach(rec => {
+      const op = rec.fields.Operator;
+      if (PREPAID_OPS.includes(op)) {
+        newAccounts[op].push({
+          id: rec.fields.BlockID || rec.id,
+          hours: rec.fields.Hours || 0,
+          date: rec.fields.Date || '',
+          notes: rec.fields.Notes || '',
+          _airtableId: rec.id
+        });
+      }
+    });
+    accounts = newAccounts;
+    localStorage.setItem('n96455_accounts', JSON.stringify(accounts));
+    return true;
+  } catch(e) { return false; }
+}
 
 function saveSettings() {
   ['claudeKey','airtableKey','airtableBase','airtableTable',
@@ -863,7 +935,9 @@ function switchTab(name, btn) {
   btn.classList.add('active');
   document.getElementById('panel-' + name).classList.add('active');
   if (name === 'history') renderHistory();
-  if (name === 'accounts') renderAccounts();
+  if (name === 'accounts') {
+    loadAccountsFromAirtable().then(() => renderAccounts());
+  }
   if (name === 'maint') renderMaint();
 }
 
@@ -1010,7 +1084,13 @@ function refreshBalanceBar() {
 }
 
 function getTotalBought(op) { return (accounts[op]||[]).reduce((s,b)=>s+b.hours,0); }
-function getUsedHours(op) { return flights.filter(f=>f.operator===op).reduce((s,f)=>s+(f.hobbsTime||0),0); }
+function getUsedHours(op) {
+  // Use Airtable history cache if available (cross-device accurate), else fall back to local
+  const source = (window._historyCache && window._historyCache.length)
+    ? window._historyCache
+    : flights.filter(f => !f._fromAirtable);
+  return source.filter(f=>f.operator===op).reduce((s,f)=>s+(parseFloat(f.hobbsTime)||0),0);
+}
 
 // =============================================
 //  SQUAWK
@@ -1149,13 +1229,16 @@ async function sendEmail(f) {
   const op = f.operator;
   const opEmail = op==='Zoltan'?settings.zoltanEmail : op==='NGFT'?settings.ngftEmail : null;
   const totalBought = getTotalBought(op);
-  const used = getUsedHours(op);
+  // used = all previous flights for this operator + this flight's hobbs time
+  const usedBefore = getUsedHours(op);
+  const thisFlightHours = parseFloat(f.hobbsTime) || 0;
+  const used = usedBefore + (window._historyCache?.find(x=>x.id===f.id) ? 0 : thisFlightHours);
   const remain = Math.max(0, totalBought - used);
   const hasPrepaid = PREPAID_OPS.includes(op) && totalBought > 0;
   const route = [f.from,f.to].filter(Boolean).join(' → ')||'—';
 
   const acctSection = hasPrepaid
-    ? `\n📊 ACCOUNT BALANCE — ${op}\n${'─'.repeat(30)}\nPurchased : ${totalBought.toFixed(1)} hrs\nUsed      : ${used.toFixed(1)} hrs\nRemaining : ${remain.toFixed(1)} hrs${remain < 5 ? '\n⚠️  LOW BALANCE — please renew soon.' : remain < 10 ? '\n⚡ Account balance below 10 hrs.' : ''}\n` : '';
+    ? `\n📊 ACCOUNT BALANCE — ${op}\n${'─'.repeat(30)}\nPurchased  : ${totalBought.toFixed(1)} hrs\nUsed       : ${used.toFixed(1)} hrs  (incl. this flight: ${thisFlightHours.toFixed(1)} hrs)\nRemaining  : ${remain.toFixed(1)} hrs${remain < 5 ? '\n⚠️  LOW BALANCE — please top up soon.' : remain < 10 ? '\n⚡ Balance below 10 hrs.' : ''}\n` : '';
 
   // Build maintenance alerts section for email
   const dueMaint = maintItems.filter(i => { const s=getMaintStatus(i); return s.overdue||s.soon; });
@@ -1243,7 +1326,7 @@ function renderAccounts() {
       <div class="account-track"><div class="account-fill" style="width:${pct}%;${fillStyle}"></div></div>
       <div class="account-stats">
         <div class="account-stat"><div class="account-stat-label">Purchased</div><div class="account-stat-val" style="color:var(--text)">${totalBought.toFixed(1)}<span style="font-size:10px;color:var(--muted)"> hrs</span></div></div>
-        <div class="account-stat"><div class="account-stat-label">Used</div><div class="account-stat-val" style="color:var(--amber)">${used.toFixed(1)}<span style="font-size:10px;color:var(--muted)"> hrs</span></div></div>
+        <div class="account-stat"><div class="account-stat-label">Used</div><div class="account-stat-val" style="color:var(--amber)">${used.toFixed(1)}<span style="font-size:10px;color:var(--muted)"> hrs</span></div><div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);margin-top:2px;">${window._historyCache?.length ? '🟢 from Airtable' : '⚪ local only'}</div></div>
         <div class="account-stat"><div class="account-stat-label">Remaining</div><div class="account-stat-val" style="color:${remColor}">${remain.toFixed(1)}<span style="font-size:10px;color:var(--muted)"> hrs</span></div></div>
       </div>`;
     if (blocks.length) {
@@ -2000,6 +2083,15 @@ function updateMaintTabBadge(count) {
   }
 }
 
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/N96455-Flightlog/sw.js')
+      .then(() => console.log('SW registered'))
+      .catch(e => console.warn('SW failed', e));
+  });
+}
 </script>
 </body>
 </html>
