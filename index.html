@@ -256,6 +256,7 @@
         <div class="aircraft-sub">DRY LEASE FLIGHT LOG</div>
         <div class="hobbs-display" id="totalHobbsDisplay"></div>
         <div id="offlineIndicator" style="display:none;font-family:'DM Mono',monospace;font-size:10px;color:var(--orange);letter-spacing:1px;margin-top:3px;">● OFFLINE</div>
+        <div id="queueIndicator" style="display:none;font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);letter-spacing:1px;margin-top:2px;cursor:pointer;" onclick="flushQueue()">⏳ <span id="queueCount">0</span> PENDING — tap to retry</div>
       </div>
     </div>
   </div>
@@ -676,7 +677,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   prefillStartFromLast();
   updateTotalHobbs();
   setTimeout(checkMaintAlerts, 800);
-  setTimeout(flushQueue, 2000);
+  setTimeout(flushQueue, 2000); // retry queued items on startup
+  setInterval(() => { if (syncQueue.length > 0) flushQueue(); }, 30000);
 });
 
 function prefillStartFromLast() {
@@ -765,15 +767,35 @@ function saveFlights() { localStorage.setItem('n96455_flights', JSON.stringify(f
 function loadQueue() {
   try { syncQueue = JSON.parse(localStorage.getItem('n96455_queue') || '[]'); }
   catch(e) { syncQueue = []; }
+  // Migrate old format (objects with .data) to new format (objects with .id)
+  syncQueue = syncQueue.map(item => {
+    if (item.data && item.data.id && !item.id) return { type: item.type, id: item.data.id, ts: item.ts };
+    return item;
+  }).filter(item => item.id || item.type === 'maint');
+  saveQueue();
 }
 
 function saveQueue() {
   localStorage.setItem('n96455_queue', JSON.stringify(syncQueue));
+  // Update visual indicator
+  const el = document.getElementById('queueIndicator');
+  const cnt = document.getElementById('queueCount');
+  if (el && cnt) {
+    if (syncQueue.length > 0) {
+      cnt.textContent = syncQueue.length;
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
 }
 
-function enqueue(type, data) {
-  syncQueue.push({ type, data, ts: Date.now() });
-  saveQueue();
+function enqueue(type, id) {
+  // Store only the flight ID — re-read full object at flush time to avoid stale data
+  if (!syncQueue.find(x => x.type === type && x.id === id)) {
+    syncQueue.push({ type, id, ts: Date.now() });
+    saveQueue();
+  }
 }
 
 async function flushQueue() {
@@ -786,12 +808,11 @@ async function flushQueue() {
     let ok = false;
     try {
       if (item.type === 'flight') {
-        ok = await syncAirtable(item.data);
-        if (ok) {
-          // Mark flight as synced in local array
-          const f = flights.find(x => x.id === item.data.id);
-          if (f) { f.synced = true; saveFlights(); }
-        }
+        // Re-read flight from local store (fresh data, not stale queue snapshot)
+        const f = flights.find(x => x.id === item.id);
+        if (!f) { ok = true; continue; } // flight deleted — remove from queue
+        ok = await syncAirtable(f);
+        if (ok) { f.synced = true; saveFlights(); }
       } else if (item.type === 'maint') {
         await syncMaintToAirtable();
         ok = true;
@@ -803,9 +824,12 @@ async function flushQueue() {
   syncQueue = failed;
   saveQueue();
 
-  if (failed.length === 0 && syncQueue.length === 0) {
+  const synced = syncQueue.length === 0;
+  if (synced) {
     showToast('☁️ All pending items synced to Airtable');
-    renderHistory(); // refresh sync indicators
+    renderHistory();
+  } else {
+    showToast(`⚠️ ${failed.length} item(s) still pending — will retry`, 'warn');
   }
 }
 
@@ -1153,9 +1177,9 @@ async function saveFlight() {
     if (navigator.onLine) {
       synced = await syncAirtable(f);
       if (synced) { f.synced=true; saveFlights(); }
-      else { enqueue('flight', f); }
+      else { enqueue('flight', f.id); }
     } else {
-      enqueue('flight', f);
+      enqueue('flight', f.id);
     }
   }
 
@@ -1564,9 +1588,9 @@ function showDetail(id) {
     if (navigator.onLine && settings.airtableKey && settings.airtableBase) {
       const ok = await syncAirtable(f);
       if (ok) { f.synced = true; saveFlights(); }
-      else enqueue('flight', f);
+      else enqueue('flight', f.id);
     } else {
-      enqueue('flight', f);
+      enqueue('flight', f.id);
     }
 
     modal.remove();
