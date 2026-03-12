@@ -894,8 +894,8 @@ async function loadAccountsFromAirtable() {
     });
     if (!r.ok) return false;
     const d = await r.json();
+    // Only overwrite local data if Airtable actually returned records
     if (!d.records || !d.records.length) return false;
-    // Rebuild accounts object
     const newAccounts = { Zoltan: [], NGFT: [] };
     d.records.forEach(rec => {
       const op = rec.fields.Operator;
@@ -909,6 +909,9 @@ async function loadAccountsFromAirtable() {
         });
       }
     });
+    // Only replace if we got data for at least one operator
+    const hasData = PREPAID_OPS.some(op => newAccounts[op].length > 0);
+    if (!hasData) return false;
     accounts = newAccounts;
     localStorage.setItem('n96455_accounts', JSON.stringify(accounts));
     return true;
@@ -1733,9 +1736,10 @@ async function loadMaintFromAirtable() {
     });
     if (!r.ok) return false;
     const d = await r.json();
+    // Only overwrite local data if Airtable actually returned records
     if (!d.records || d.records.length === 0) return false;
 
-    maintItems = d.records.map(rec => ({
+    const fetched = d.records.map(rec => ({
       id: rec.fields.ItemID || rec.id,
       name: rec.fields.Name || '',
       type: rec.fields.Type || 'tach',
@@ -1746,7 +1750,9 @@ async function loadMaintFromAirtable() {
       _airtableId: rec.id
     }));
 
-    // Cache locally
+    // Only replace if Airtable returned meaningful items with names
+    if (!fetched.some(i => i.name)) return false;
+    maintItems = fetched;
     localStorage.setItem('n96455_maint', JSON.stringify(maintItems));
     return true;
   } catch(e) { return false; }
@@ -1806,15 +1812,17 @@ async function renderMaint() {
   const alertEl = document.getElementById('maintAlerts');
   const listEl = document.getElementById('maintList');
 
-  // Always try to refresh from Airtable when tab is opened
+  // Try Airtable first, fall back to localStorage, then defaults — never show empty
   const listEl2 = document.getElementById('maintList');
   if (listEl2) listEl2.innerHTML = '<div class="empty-state"><span class="empty-icon" style="font-size:24px">⏳</span>Loading...</div>';
   const fromAt = await loadMaintFromAirtable();
-  if (!fromAt && !maintItems.length) {
+  if (!fromAt) {
+    // Airtable unavailable or empty — use localStorage
     try {
       const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
-      maintItems = mx || defaultMaintItems();
-    } catch(e) { maintItems = defaultMaintItems(); }
+      if (mx && mx.length) maintItems = mx;
+      else if (!maintItems.length) maintItems = defaultMaintItems();
+    } catch(e) { if (!maintItems.length) maintItems = defaultMaintItems(); }
   }
 
   const curTach = getCurrentTach();
@@ -2073,13 +2081,14 @@ async function checkMaintAlerts() {
   if (!fromAirtable) {
     try {
       const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
-      maintItems = mx || defaultMaintItems();
-      if (!mx) {
+      if (mx && mx.length) {
+        maintItems = mx;
+      } else if (!maintItems.length) {
+        maintItems = defaultMaintItems();
         localStorage.setItem('n96455_maint', JSON.stringify(maintItems));
-        // Seed Airtable with defaults on first run
-        syncMaintToAirtable();
+        syncMaintToAirtable(); // seed Airtable on first run
       }
-    } catch(e) { maintItems = defaultMaintItems(); }
+    } catch(e) { if (!maintItems.length) maintItems = defaultMaintItems(); }
   }
 
   const dueItems = maintItems.filter(i => {
