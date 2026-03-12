@@ -1277,7 +1277,9 @@ ${dueMaint.map(i => {
   }).join('\n')}
 ` : '';
 
-  const body = `N96455 CESSNA C182 — FLIGHT LOG
+  const subjectLine = `N96455 | ${formatDate(f.date)} | ${f.operator} | PIC: ${f.pic}${f.squawks?' [SQUAWK]':''}${dueMaint.length?' [MAINT]':''}`;
+
+  const body = `${subjectLine}
 ${'═'.repeat(40)}
 Date      : ${formatDate(f.date)}
 Operator  : ${f.operator}
@@ -1292,7 +1294,9 @@ Oil    : ${f.oil} qt
 ${f.squawks?'\n⚠️  SQUAWK — '+f.squawks:''}${f.notes?'\n\nNotes: '+f.notes:''}
 ${acctSection}${maintSection}${'═'.repeat(40)}`;
 
-  const subject = `N96455 | ${formatDate(f.date)} | ${f.operator} | PIC: ${f.pic}${f.squawks?' [SQUAWK]':''}${dueMaint.length?' [MAINT]':''}`;
+  // Use a fixed subject in EmailJS template to avoid HTML encoding issues
+  // The real subject is the first line of the body
+  const subject = 'N96455 Flight Log';
   const recipients = [
     settings.ownerEmail ? {email:settings.ownerEmail, name:'Aircraft Owner'} : null,
     opEmail ? {email:opEmail, name:op} : null
@@ -1301,7 +1305,13 @@ ${acctSection}${maintSection}${'═'.repeat(40)}`;
   for (const r of recipients) {
     try {
       await emailjs.send(settings.emailServiceId, settings.emailTemplateId,
-        {to_email:r.email, to_name:r.name, subject, body});
+        {
+          to_email: r.email,
+          to_name:  r.name,
+          name:     r.name,
+          subject,
+          body
+        });
     } catch(e) { console.warn('Email failed for', r.email, e); }
   }
 }
