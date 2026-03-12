@@ -1292,7 +1292,7 @@ Oil    : ${f.oil} qt
 ${f.squawks?'\n⚠️  SQUAWK — '+f.squawks:''}${f.notes?'\n\nNotes: '+f.notes:''}
 ${acctSection}${maintSection}${'═'.repeat(40)}`;
 
-  const subject = `N96455 · ${formatDate(f.date)} · ${f.operator}/${f.pic}${f.squawks?' ⚠️ SQUAWK':''}${dueMaint.length?' 🔧 MAINT':''}`;
+  const subject = `N96455 · ${formatDate(f.date)} · ${f.operator} · ${f.pic}${f.squawks?' ⚠️ SQUAWK':''}${dueMaint.length?' 🔧 MAINT':''}`;
   const recipients = [
     settings.ownerEmail ? {email:settings.ownerEmail, name:'Aircraft Owner'} : null,
     opEmail ? {email:opEmail, name:op} : null
