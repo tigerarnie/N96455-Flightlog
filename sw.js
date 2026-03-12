@@ -1,7 +1,7 @@
-const CACHE = 'n96455-v1';
+const CACHE = 'n96455-v2';
 const ASSETS = [
-  '/N96455-Flightlog/',
-  '/N96455-Flightlog/index.html',
+  './',
+  './index.html',
   'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap',
   'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js'
 ];
@@ -23,12 +23,13 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Let Airtable/API calls go straight to network
+  // Pass API calls straight to network — never cache these
   if (e.request.url.includes('airtable.com') ||
       e.request.url.includes('anthropic.com') ||
       e.request.url.includes('emailjs.com/api')) {
     return;
   }
+
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
@@ -38,7 +39,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return res;
-      }).catch(() => caches.match('/N96455-Flightlog/index.html'));
+      }).catch(() => caches.match('./index.html'));
     })
   );
 });
