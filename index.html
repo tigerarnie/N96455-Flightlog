@@ -628,12 +628,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
-// Init EmailJS immediately with hardcoded key
-document.addEventListener('DOMContentLoaded', () => {
-  try { emailjs.init('VGmkkEq6qH-hZ0VeM'); } catch(e) {}
-});
-</script>
-<script>
 // =============================================
 //  STATE
 // =============================================
@@ -662,6 +656,14 @@ const DEFAULTS = {
 //  INIT
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
+  // Init EmailJS
+  try { emailjs.init('VGmkkEq6qH-hZ0VeM'); } catch(e) {}
+
+  // Set offline indicator
+  if (!navigator.onLine) {
+    document.getElementById('offlineIndicator').style.display = 'block';
+  }
+
   loadData();
   document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('fFrom').value = 'P19';
@@ -684,15 +686,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function prefillStartFromLast() {
-  if (!flights.length) return;
-  const last = flights[0];
-  if (last.hobbsEnd) {
-    const el = document.getElementById('hobbsStart');
-    el.value = last.hobbsEnd; el.classList.add('auto-prev');
+  // Find the best source: highest hobbsEnd across local flights + cache
+  const cachedHobbs = parseFloat(localStorage.getItem('n96455_lastHobbs')) || 0;
+  const cachedTach  = parseFloat(localStorage.getItem('n96455_lastTach')) || 0;
+  const localLatest = flights.filter(f => !f._fromAirtable && f.hobbsEnd)
+    .sort((a,b) => (b.hobbsEnd||0) - (a.hobbsEnd||0))[0];
+  const bestHobbs = Math.max(cachedHobbs, localLatest?.hobbsEnd || 0);
+  const bestTach  = Math.max(cachedTach,  localLatest?.tachEnd  || 0);
+
+  const hobbsEl = document.getElementById('hobbsStart');
+  const tachEl  = document.getElementById('tachStart');
+  if (bestHobbs && hobbsEl && !hobbsEl.value) {
+    hobbsEl.value = bestHobbs;
+    hobbsEl.classList.add('auto-prev');
   }
-  if (last.tachEnd) {
-    const el = document.getElementById('tachStart');
-    el.value = last.tachEnd; el.classList.add('auto-prev');
+  if (bestTach && tachEl && !tachEl.value) {
+    tachEl.value = bestTach;
+    tachEl.classList.add('auto-prev');
   }
   computeTimes();
 }
@@ -872,12 +882,6 @@ window.addEventListener('offline', () => {
   showToast('✈️ Offline mode — flights saved locally', 'warn');
 });
 
-// Set initial state
-document.addEventListener('DOMContentLoaded', () => {
-  if (!navigator.onLine) {
-    document.getElementById('offlineIndicator').style.display = 'block';
-  }
-});
 function saveAccountsStore() {
   localStorage.setItem('n96455_accounts', JSON.stringify(accounts));
   syncAccountsToAirtable();
@@ -1682,8 +1686,8 @@ function clearForm(skipPrefill) {
   document.getElementById('balanceBar').style.display='none';
   computeTimes();
   ['hobbs','tach'].forEach(t => retakePhoto(t));
-  if (!skipPrefill) prefillStartFromLast();
-  else { prefillStartFromLast(); }
+  prefillStartFromLast();
+  prefillFromCache();
 }
 
 let toastTimer;
@@ -2141,8 +2145,8 @@ function updateMaintTabBadge(count) {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/N96455-Flightlog/sw.js')
-      .then(() => console.log('SW registered'))
+    navigator.serviceWorker.register('/N96455-Flightlog/sw.js', { scope: '/N96455-Flightlog/' })
+      .then(reg => console.log('SW registered, scope:', reg.scope))
       .catch(e => console.warn('SW failed', e));
   });
 }
