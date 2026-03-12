@@ -672,12 +672,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadSettingsUI();
   loadQueue();
 
-  // Step 1: instant prefill from local cache (works offline, zero delay)
-  prefillStartFromLast();
-  prefillFromCache();
   updateTotalHobbs();
 
-  // Step 2: fetch from Airtable and update if different (async, corrects cross-device)
+  // Always fetch latest Hobbs/Tach from Airtable — single source of truth
   await syncLatestFlightFromAirtable();
 
   setTimeout(checkMaintAlerts, 800);
@@ -686,25 +683,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function prefillStartFromLast() {
-  // Find the best source: highest hobbsEnd across local flights + cache
-  const cachedHobbs = parseFloat(localStorage.getItem('n96455_lastHobbs')) || 0;
-  const cachedTach  = parseFloat(localStorage.getItem('n96455_lastTach')) || 0;
-  const localLatest = flights.filter(f => !f._fromAirtable && f.hobbsEnd)
-    .sort((a,b) => (b.hobbsEnd||0) - (a.hobbsEnd||0))[0];
-  const bestHobbs = Math.max(cachedHobbs, localLatest?.hobbsEnd || 0);
-  const bestTach  = Math.max(cachedTach,  localLatest?.tachEnd  || 0);
-
-  const hobbsEl = document.getElementById('hobbsStart');
-  const tachEl  = document.getElementById('tachStart');
-  if (bestHobbs && hobbsEl && !hobbsEl.value) {
-    hobbsEl.value = bestHobbs;
-    hobbsEl.classList.add('auto-prev');
-  }
-  if (bestTach && tachEl && !tachEl.value) {
-    tachEl.value = bestTach;
-    tachEl.classList.add('auto-prev');
-  }
-  computeTimes();
+  // Intentionally empty — prefill is handled entirely by syncLatestFlightFromAirtable()
 }
 
 // Fetch the single most recent flight from Airtable to get correct
@@ -730,10 +709,6 @@ async function syncLatestFlightFromAirtable() {
     const remoteHobbs = latest.fields.HobbsEnd;
     const remoteTach = latest.fields.TachEnd;
     if (!remoteHobbs) return;
-
-    // Always cache the Airtable values — they are the ground truth
-    localStorage.setItem('n96455_lastHobbs', remoteHobbs);
-    if (remoteTach) localStorage.setItem('n96455_lastTach', remoteTach);
 
     // Remove any old synthetic record and replace with fresh one
     flights = flights.filter(f => f.id !== 'remote-latest');
@@ -765,19 +740,7 @@ async function syncLatestFlightFromAirtable() {
 
 // Fallback prefill from localStorage cache (works offline after first online load)
 function prefillFromCache() {
-  const cachedHobbs = localStorage.getItem('n96455_lastHobbs');
-  const cachedTach  = localStorage.getItem('n96455_lastTach');
-  const hobbsStartEl = document.getElementById('hobbsStart');
-  const tachStartEl  = document.getElementById('tachStart');
-  if (cachedHobbs && hobbsStartEl && !hobbsStartEl.value) {
-    hobbsStartEl.value = cachedHobbs;
-    hobbsStartEl.classList.add('auto-prev');
-  }
-  if (cachedTach && tachStartEl && !tachStartEl.value) {
-    tachStartEl.value = cachedTach;
-    tachStartEl.classList.add('auto-prev');
-  }
-  computeTimes();
+  // No-op — prefill always comes from Airtable via syncLatestFlightFromAirtable()
 }
 
 // =============================================
@@ -787,13 +750,14 @@ function loadData() {
   try {
     flights = JSON.parse(localStorage.getItem('n96455_flights') || '[]');
     const saved = JSON.parse(localStorage.getItem('n96455_settings') || '{}');
-    // Merge: DEFAULTS apply everywhere, saved keys (claudeKey, airtableKey) override per-device
     settings = Object.assign({}, DEFAULTS, saved);
     const a = JSON.parse(localStorage.getItem('n96455_accounts') || 'null');
     accounts = a || { Zoltan: [], NGFT: [] };
     const mx = JSON.parse(localStorage.getItem('n96455_maint') || 'null');
     maintItems = mx || defaultMaintItems();
-    if (!mx) localStorage.setItem('n96455_maint', JSON.stringify(maintItems)); // seed defaults
+    if (!mx) localStorage.setItem('n96455_maint', JSON.stringify(maintItems));
+
+
   } catch(e) { flights=[]; settings=Object.assign({},DEFAULTS); accounts={Zoltan:[],NGFT:[]}; maintItems=defaultMaintItems(); }
 }
 function saveFlights() { localStorage.setItem('n96455_flights', JSON.stringify(flights)); }
@@ -1198,9 +1162,6 @@ async function saveFlight() {
 
   flights.unshift(f);
   saveFlights();
-  // Cache latest values for instant offline prefill next load
-  localStorage.setItem('n96455_lastHobbs', f.hobbsEnd);
-  if (f.tachEnd) localStorage.setItem('n96455_lastTach', f.tachEnd);
   updateTotalHobbs();
 
   const btn = document.getElementById('saveBtn');
@@ -1686,8 +1647,15 @@ function clearForm(skipPrefill) {
   document.getElementById('balanceBar').style.display='none';
   computeTimes();
   ['hobbs','tach'].forEach(t => retakePhoto(t));
-  prefillStartFromLast();
-  prefillFromCache();
+  // Prefill will be handled by Airtable fetch — show loading hint
+  const hobbsEl = document.getElementById('hobbsStart');
+  const tachEl  = document.getElementById('tachStart');
+  hobbsEl.placeholder = 'fetching...';
+  tachEl.placeholder  = 'fetching...';
+  syncLatestFlightFromAirtable().then(() => {
+    hobbsEl.placeholder = '—';
+    tachEl.placeholder  = '—';
+  });
 }
 
 let toastTimer;
@@ -2145,7 +2113,7 @@ function updateMaintTabBadge(count) {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/N96455-Flightlog/sw.js', { scope: '/N96455-Flightlog/' })
+    navigator.serviceWorker.register('./sw.js')
       .then(reg => console.log('SW registered, scope:', reg.scope))
       .catch(e => console.warn('SW failed', e));
   });
